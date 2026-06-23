@@ -55,6 +55,21 @@ ships four types:
 
 Always confirm against the actual READMEs — a project may have added, removed, or renamed sections.
 
+## Finding the right doc (AI navigation)
+
+When working on the codebase, consult docs **before** re-deriving things from scratch — a doc may already
+explain the *why* (design/ADR) or the *gotcha* (runbook). Find it fast without reading the whole tree:
+
+- **Browse by type:** the `## Index` table in each `docs/<type>/README.md` (`Doc | Status | Owner | What it
+  is`) — the quickest overview of what exists.
+- **By module/scope:** `grep -rn '^- \*\*Module(s):' docs` then match the area you're touching. The
+  `Module(s)` header field is the primary navigation key — keep it filled when creating docs.
+- **By keyword:** `grep -rni '<keyword>' docs`.
+- **Follow `Related`:** a doc's `Related` line links to the ADRs/runbooks/specs around it.
+
+The project's `CLAUDE.md` carries a doc-keeper block pointing here (added by `/doc-keeper:init`), so this
+"check docs first" habit stays in context even outside this skill.
+
 ## Shared header (identical fields/names/order across all types)
 
 ```

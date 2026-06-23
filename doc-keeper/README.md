@@ -11,6 +11,8 @@ layout, add your own doc sections, file plan outcomes under the right doc, and k
   `Index` table, `Status lifecycle`).
 - Reusable `templates/` for new docs and new sections.
 - A `docs` skill that keeps statuses honest, files plan outcomes, and fixes references on rename/move.
+- An **AI-navigation block in `CLAUDE.md`** (added on `init`) so Claude checks the relevant doc before
+  working on an area, and updates it afterwards — with grep recipes to find docs by module/keyword.
 
 The taxonomy lives entirely in the READMEs — there is **no separate config file**. Adding a custom section
 is: one line in `docs/README.md` + one new `docs/<type>/README.md`. The skill reads both and learns it.
@@ -29,7 +31,7 @@ install:
 
 | Command                         | What it does                                                          |
 |---------------------------------|-----------------------------------------------------------------------|
-| `/doc-keeper:init [dir]`        | Scaffold `docs/` (README, templates, default sections) into the repo. |
+| `/doc-keeper:init [dir]`        | Scaffold `docs/` + add an AI-navigation block to `CLAUDE.md`.         |
 | `/doc-keeper:new <type> [slug]` | Create a doc from the template and register it in the type's Index.   |
 | `/doc-keeper:section <dir>`     | Add a custom doc section with its own README and status vocabulary.   |
 | `/doc-keeper:audit [scope]`     | Verify statuses, flag stale docs, find broken README links.           |
