@@ -1,6 +1,6 @@
 {
   "name": "doc-keeper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bring a consistent docs/ system to any project: scaffold the layout, add custom doc sections, file plan outcomes under the right doc, and keep statuses honest.",
   "author": {
     "name": "Valeria Kononenko"
