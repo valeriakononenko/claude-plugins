@@ -2,10 +2,12 @@
 name: docs
 description: >
   Track and maintain the repo documentation under docs/ (design specs, ADRs, runbooks, guides, and any
-  custom sections) and its templates. Use when creating, moving, renaming, reviewing, or auditing any doc;
-  when adding/updating a doc header, Status, Owner, or a type README Index; when a code change may have made
-  a doc's Status stale (e.g. a PR merged, a feature shipped, a file renamed); when filing the outcome of a
-  plan under the right doc; or when the user asks to review docs / list doc statuses / check what's outdated.
+  custom sections) and its templates. Use whenever the user asks in plain language to write/create a doc of
+  any type ("write a runbook for…", "add an ADR about…", "draft a design spec / guide for…", "document
+  this"), or to move, rename, review, or audit a doc; when adding/updating a doc header, Status, Owner, or a
+  type README Index; when adding a new doc section/type; when a code change may have made a doc's Status
+  stale (e.g. a PR merged, a feature shipped, a file renamed); when filing the outcome of a plan under the
+  right doc; or when the user asks to review docs / list doc statuses / check what's outdated.
 ---
 
 # Tracking docs/
@@ -16,6 +18,26 @@ section = this project's section set), the file-naming rules, and the shared hea
 header is defined once in `docs/templates/doc-template.md`, not repeated per type. There is
 **no separate config file** — the taxonomy lives in these READMEs. This skill is the *procedure*; the
 READMEs are the *spec*. Don't duplicate the spec here — if it changes, the READMEs win.
+
+## Natural-language requests (no slash command needed)
+
+The user does **not** need to invoke a command — act on plain-language requests by following the matching
+procedure below. The `/doc-keeper:*` commands are just deterministic shortcuts for the same actions.
+
+- "write a runbook for…", "add an ADR about…", "draft a guide / design spec for…", "document this" →
+  *Creating a doc*, then write the body following that type's README structure.
+- "add a new doc section / doc type for…" → *Adding a custom section*.
+- "what docs are outdated / stale", "review the docs" → *Keeping statuses honest* (verify, don't trust).
+- "list doc statuses", "show me the docs dashboard" → the *Audit helpers* status dump.
+- "rename / move this doc" → *Renaming / moving a doc*.
+
+When you create a doc from a plain-language request, also **write its body**, not just the header + Index
+row — follow the body structure in that type's README (e.g. a runbook's Symptom / Procedure / Verification /
+Related). Ask only for what you genuinely can't infer (e.g. the owner of a brand-new file).
+
+**If `docs/` doesn't exist yet** (no `docs/README.md`), the project hasn't been scaffolded. Don't hand-roll
+the tree — tell the user to run `/doc-keeper:init` first (it copies the templates and default sections from
+the plugin), then proceed.
 
 ## Learn the taxonomy first
 
@@ -104,6 +126,7 @@ When you produce or execute a plan, make it land in the docs:
 ## Audit helpers
 
 Dump every doc's Status + Owner:
+
 ```bash
 for f in $(find docs -name '*.md' ! -name 'README.md' ! -path '*/templates/*'); do
   printf '%s\t%s\t%s\n' "${f#docs/}" \
@@ -113,6 +136,7 @@ done
 ```
 
 Find broken local links in a README (run from the file's dir):
+
 ```bash
 grep -oE '\]\([^)]+\)' <file>.md | sed -E 's/^\]\(//;s/\)$//' | while read -r l; do
   case "$l" in http*) continue;; esac; p="${l#./}"; p="${p%%#*}"
