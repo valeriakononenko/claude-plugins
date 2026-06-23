@@ -1,0 +1,13 @@
+{
+  "name": "claude-plugins",
+  "owner": {
+    "name": "Valeria Kononenko"
+  },
+  "plugins": [
+    {
+      "name": "doc-keeper",
+      "source": "./doc-keeper",
+      "description": "Bring a consistent docs/ system to any project: scaffold the layout, add custom doc sections, file plan outcomes under the right doc, and keep statuses honest."
+    }
+  ]
+}
