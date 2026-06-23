@@ -27,6 +27,34 @@ then install:
 /plugin install doc-keeper@divergence082-plugins
 ```
 
+## Update
+
+There is no single update command — refresh the marketplace from git, then reinstall the plugin at the new
+version:
+
+```
+/plugin marketplace update divergence082-plugins
+/plugin install doc-keeper@divergence082-plugins
+```
+
+Already-scaffolded projects keep their `docs/`; re-running `/doc-keeper:init` after an update only fills in
+files added by the new version.
+
+## Quick start
+
+After installing, open the project you want documented and run the one-time scaffold:
+
+```
+/doc-keeper:init
+```
+
+This creates `docs/` (root README + templates + the four default sections) and adds an AI-navigation block
+to the project's `CLAUDE.md`. Re-running it is safe — it only fills missing files, never overwrites.
+
+From then on you don't need the slash commands: just ask in plain language ("write a runbook for…", "what
+docs are stale?") and the bundled `docs` skill takes over. If you ask before running `init`, Claude prompts
+you to scaffold first.
+
 ## Commands
 
 | Command                         | What it does                                                          |
