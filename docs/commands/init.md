@@ -3,7 +3,7 @@ description: Scaffold a docs/ system (README, templates, default sections) into 
 argument-hint: "[target dir, default: docs]"
 ---
 
-Scaffold the doc-keeper documentation system into this project. The plugin's source templates live under
+Scaffold the docs/ documentation system into this project. The plugin's source templates live under
 `${CLAUDE_PLUGIN_ROOT}/templates/`.
 
 Target docs directory: `$1` if given, otherwise `docs`.
@@ -26,14 +26,14 @@ Do this:
 5. **CLAUDE.md pointer (AI navigation).** So Claude consults the docs while working, add a managed block to
    the project's root `CLAUDE.md` from `${CLAUDE_PLUGIN_ROOT}/templates/claude-md-block.md`:
    - If `CLAUDE.md` doesn't exist, create it with that block.
-   - If it exists with a `<!-- doc-keeper:start -->`…`<!-- doc-keeper:end -->` block, **replace** the
+   - If it exists with a `<!-- docs:start -->`…`<!-- docs:end -->` block, **replace** the
      content between the markers (idempotent — never duplicate it).
    - If it exists without the markers, append the block.
    - If `<target>` is not the default `docs`, adjust the paths inside the block to point at `<target>/`.
 
 6. **Report.** Print the resulting tree, note whether `CLAUDE.md` was created/updated/left alone, and remind
    the user that `<target>/README.md`'s "Doc types" list + the per-type READMEs are the taxonomy source of
-   truth (no separate config file), and that they can add custom sections with `/doc-keeper:section`.
+   truth (no separate config file), and that they can add custom sections with `/docs:section`.
 
 Keep all generated `.md` already-formatted: ≤120-col lines, aligned tables, no trailing whitespace. Do not
 add code comments to anything outside the templates' existing HTML comments.

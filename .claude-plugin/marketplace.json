@@ -5,8 +5,8 @@
   },
   "plugins": [
     {
-      "name": "doc-keeper",
-      "source": "./doc-keeper",
+      "name": "docs",
+      "source": "./docs",
       "description": "Bring a consistent docs/ system to any project: scaffold the layout, add custom doc sections, file plan outcomes under the right doc, and keep statuses honest."
     }
   ]

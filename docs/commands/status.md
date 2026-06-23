@@ -18,4 +18,4 @@ done
 ```
 
 Render as a Markdown table (`Doc | Status | Owner | Last verified`), grouped by type dir. This is the cheap
-dashboard; for verification of whether those statuses are actually true, use `/doc-keeper:audit`.
+dashboard; for verification of whether those statuses are actually true, use `/docs:audit`.

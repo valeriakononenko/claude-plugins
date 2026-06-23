@@ -22,7 +22,7 @@ READMEs are the *spec*. Don't duplicate the spec here — if it changes, the REA
 ## Natural-language requests (no slash command needed)
 
 The user does **not** need to invoke a command — act on plain-language requests by following the matching
-procedure below. The `/doc-keeper:*` commands are just deterministic shortcuts for the same actions.
+procedure below. The `/docs:*` commands are just deterministic shortcuts for the same actions.
 
 - "write a runbook for…", "add an ADR about…", "draft a guide / design spec for…", "document this" →
   *Creating a doc*, then write the body following that type's README structure.
@@ -36,7 +36,7 @@ row — follow the body structure in that type's README (e.g. a runbook's Sympto
 Related). Ask only for what you genuinely can't infer (e.g. the owner of a brand-new file).
 
 **If `docs/` doesn't exist yet** (no `docs/README.md`), the project hasn't been scaffolded. Don't hand-roll
-the tree — tell the user to run `/doc-keeper:init` first (it copies the templates and default sections from
+the tree — tell the user to run `/docs:init` first (it copies the templates and default sections from
 the plugin), then proceed.
 
 ## Learn the taxonomy first
@@ -67,7 +67,7 @@ explain the *why* (design/ADR) or the *gotcha* (runbook). Find it fast without r
 - **By keyword:** `grep -rni '<keyword>' docs`.
 - **Follow `Related`:** a doc's `Related` line links to the ADRs/runbooks/specs around it.
 
-The project's `CLAUDE.md` carries a doc-keeper block pointing here (added by `/doc-keeper:init`), so this
+The project's `CLAUDE.md` carries a docs block pointing here (added by `/docs:init`), so this
 "check docs first" habit stays in context even outside this skill.
 
 ## Shared header (identical fields/names/order across all types)

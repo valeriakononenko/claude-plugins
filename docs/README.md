@@ -1,4 +1,4 @@
-# doc-keeper
+# docs
 
 A Claude Code plugin that brings a consistent `docs/` documentation system to **any** project: scaffold the
 layout, add your own doc sections, file plan outcomes under the right doc, and keep doc statuses honest.
@@ -24,7 +24,7 @@ then install:
 
 ```
 /plugin marketplace add <path-or-url to claude-plugins>
-/plugin install doc-keeper@divergence082-plugins
+/plugin install docs@divergence082-plugins
 ```
 
 ## Update
@@ -34,10 +34,10 @@ version:
 
 ```
 /plugin marketplace update divergence082-plugins
-/plugin install doc-keeper@divergence082-plugins
+/plugin install docs@divergence082-plugins
 ```
 
-Already-scaffolded projects keep their `docs/`; re-running `/doc-keeper:init` after an update only fills in
+Already-scaffolded projects keep their `docs/`; re-running `/docs:init` after an update only fills in
 files added by the new version.
 
 ## Quick start
@@ -45,7 +45,7 @@ files added by the new version.
 After installing, open the project you want documented and run the one-time scaffold:
 
 ```
-/doc-keeper:init
+/docs:init
 ```
 
 This creates `docs/` (root README + templates + the four default sections) and adds an AI-navigation block
@@ -59,11 +59,11 @@ you to scaffold first.
 
 | Command                         | What it does                                                          |
 |---------------------------------|-----------------------------------------------------------------------|
-| `/doc-keeper:init [dir]`        | Scaffold `docs/` + add an AI-navigation block to `CLAUDE.md`.         |
-| `/doc-keeper:new <type> [slug]` | Create a doc from the template and register it in the type's Index.   |
-| `/doc-keeper:section <dir>`     | Add a custom doc section with its own README and status vocabulary.   |
-| `/doc-keeper:audit [scope]`     | Verify statuses, flag stale docs, find broken README links.           |
-| `/doc-keeper:status [type]`     | Fast read-only one-line-per-doc status table.                         |
+| `/docs:init [dir]`        | Scaffold `docs/` + add an AI-navigation block to `CLAUDE.md`.         |
+| `/docs:new <type> [slug]` | Create a doc from the template and register it in the type's Index.   |
+| `/docs:section <dir>`     | Add a custom doc section with its own README and status vocabulary.   |
+| `/docs:audit [scope]`     | Verify statuses, flag stale docs, find broken README links.           |
+| `/docs:status [type]`     | Fast read-only one-line-per-doc status table.                         |
 
 ## The skill
 

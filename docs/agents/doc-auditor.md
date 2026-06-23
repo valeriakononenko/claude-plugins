@@ -3,7 +3,7 @@ name: doc-auditor
 description: >
   Read-only auditor for a single doc or a small set of docs. Verifies that a doc's Status, claims, and
   references are still true against the actual code/git — does not edit. Use it to fan out the verification
-  step of /doc-keeper:audit over a large docs tree, one doc (or a few) per agent.
+  step of /docs:audit over a large docs tree, one doc (or a few) per agent.
 tools: Bash, Read, Grep, Glob
 ---
 
