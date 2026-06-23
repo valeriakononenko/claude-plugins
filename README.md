@@ -11,5 +11,5 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
 ```
 /plugin marketplace add valeriakononenko/claude-plugins
-/plugin install doc-keeper@claude-plugins
+/plugin install doc-keeper@divergence082-plugins
 ```

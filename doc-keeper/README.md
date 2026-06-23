@@ -19,12 +19,12 @@ is: one line in `docs/README.md` + one new `docs/<type>/README.md`. The skill re
 
 ## Install
 
-This plugin is published from the `claude-plugins` marketplace (the parent repo). Add the marketplace, then
-install:
+This plugin is published from the `divergence082-plugins` marketplace (the parent repo). Add the marketplace,
+then install:
 
 ```
 /plugin marketplace add <path-or-url to claude-plugins>
-/plugin install doc-keeper@claude-plugins
+/plugin install doc-keeper@divergence082-plugins
 ```
 
 ## Commands
