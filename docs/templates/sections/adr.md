@@ -12,7 +12,9 @@ argues *how/whether to build*; an ADR records the *decision* that came out of it
 
 ## Status lifecycle (required)
 
-Each ADR lives at `docs/adr/ADR-<NNNN>-<YYYY-MM-DD>-<slug>.md` and opens with the **shared header** (see
+Each ADR lives at `docs/adr/<NNNN>-<YYYY-MM-DD>-<slug>.md` (same naming rule as every other type — `<NNNN>`
+is the per-folder running number, zero-padded to 4, and doubles as the ADR number) and opens with the
+**shared header** (see
 [`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status` vocabulary is
 ADR-specific:
 
@@ -24,8 +26,9 @@ ADR-specific:
 
 ## Conventions
 
-- **Numbering:** `ADR-<NNNN>` is sequential and **never reused** — the next ADR takes the highest existing
-  number + 1. The number appears in the filename, the `# Title`, and the Index row.
+- **Numbering:** `<NNNN>` is sequential and **never reused** — the next ADR takes the highest existing
+  number + 1. The number leads the filename and is also written `ADR-<NNNN>` in the `# Title` and the Index
+  row.
 - **Append-only:** don't rewrite an accepted ADR to reflect a new decision — write a new ADR and set the
   old one's `Status` to `superseded by ADR-NNNN`, with a `Related` link both ways.
 - **One decision per ADR:** keep them small and focused so they can be superseded independently.

@@ -84,12 +84,15 @@ The project's `CLAUDE.md` carries a docs block pointing here (added by `/docs:in
 ## Creating a doc
 
 1. Copy `docs/templates/doc-template.md` to `docs/<type>/<naming>.md`, where `<naming>` follows that type's
-   rule from its README (default `<created_at>-<slug>`; ADRs `ADR-<NNNN>-<created_at>-<slug>`, NNNN =
-   highest existing + 1, never reused).
+   rule from its README. The same rule applies to every type including ADRs: `<NNNN>-<created_at>-<slug>`,
+   `<NNNN>` = the doc's running number within that type's folder, zero-padded to 4 = highest existing
+   `<NNNN>` in `docs/<type>/` + 1, never reused (starts at `0001`). For ADRs that `<NNNN>` is also the ADR
+   number used in the title and cross-references.
 2. Fill the header. **Owner = the real author** — derive from git, do NOT default to the current user:
    `git log --diff-filter=A --follow --format='%an <%ae>' -- <path> | tail -1`. Untracked/new file →
    confirm the owner with the user rather than assuming.
-3. Add a row to that type's README `## Index` table (`Doc | Status | Owner | What it is`).
+3. Add a row to that type's README `## Index` table (`Doc | Status | Owner | What it is`), in `<NNNN>`
+   order — append a new doc at the end so the table stays in creation order.
 
 ## Adding a custom section
 

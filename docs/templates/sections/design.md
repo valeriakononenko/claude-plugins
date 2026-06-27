@@ -12,9 +12,10 @@ single locked-in decision belongs in an ADR; *what to do off the happy path* bel
 
 ## Status lifecycle (required)
 
-Each design spec lives at `docs/design/<YYYY-MM-DD>-<slug>.md` (date = when first written) and opens with
-the **shared header** (see [`../templates/doc-template.md`](../templates/doc-template.md)). Only the
-`Status` vocabulary is design-specific:
+Each design spec lives at `docs/design/<NNNN>-<YYYY-MM-DD>-<slug>.md` (`<NNNN>` = its running number within
+`design/`, zero-padded to 4; date = when first written) and opens with the **shared header** (see
+[`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status` vocabulary is
+design-specific:
 
 | Status      | Meaning                                                             |
 |-------------|---------------------------------------------------------------------|

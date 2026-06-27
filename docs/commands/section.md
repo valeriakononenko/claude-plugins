@@ -16,7 +16,8 @@ Gather (ask the user, suggest sensible defaults):
 
 - **Name** — display heading for the type README (e.g. "Research notes").
 - **Purpose** — one line: what this type is *for* and how it differs from the others.
-- **Naming rule** — default `<created_at>-<slug>`; only change if there's a reason (like ADR numbering).
+- **Naming rule** — default `<NNNN>-<created_at>-<slug>` (`<NNNN>` = per-folder running number, zero-padded
+  to 4); only change if there's a reason.
 - **Status vocabulary** — the lifecycle values + meanings for this type.
 
 Then do this:

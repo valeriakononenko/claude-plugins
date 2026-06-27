@@ -13,9 +13,10 @@ task*.
 
 ## Status lifecycle (required)
 
-Each runbook lives at `docs/runbooks/<YYYY-MM-DD>-<slug>.md` (date = when first written) and opens with the
-**shared header** (see [`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status`
-vocabulary is runbook-specific:
+Each runbook lives at `docs/runbooks/<NNNN>-<YYYY-MM-DD>-<slug>.md` (`<NNNN>` = its running number within
+`runbooks/`, zero-padded to 4; date = when first written) and opens with the **shared header** (see
+[`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status` vocabulary is
+runbook-specific:
 
 | Status           | Meaning                                                                                                                                                 |
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|

@@ -10,8 +10,11 @@
 - **Related:** …                    <!-- links: issues, ADRs, runbooks, other repos, tickets -->
 
 <!--
-Skeleton for a SINGLE doc — copy to docs/<type>/<created_at>-<slug>.md
-(ADRs: docs/adr/ADR-<NNNN>-<created_at>-<slug>.md), fill the header, delete these comments, write the body.
+Skeleton for a SINGLE doc — copy to docs/<type>/<NNNN>-<created_at>-<slug>.md, the same rule for every type
+including ADRs. <NNNN> = the doc's running number within its type's folder, zero-padded to 4 and starting at
+0001; the next doc takes the highest existing <NNNN> in that folder + 1, never reused. For ADRs that <NNNN>
+is also the ADR number used in its title and cross-references. Fill the header, delete these comments,
+write the body.
 To start a docs/<type>/README.md instead, use doc-section-template.md.
 
 Shared-header rules — identical for every doc type, so all docs read the same way:

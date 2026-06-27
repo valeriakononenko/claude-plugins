@@ -12,9 +12,10 @@ do when you fall off it.
 
 ## Status lifecycle (required)
 
-Each guide lives at `docs/guides/<YYYY-MM-DD>-<slug>.md` (date = when first written) and opens with the
-**shared header** (see [`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status`
-vocabulary is guide-specific:
+Each guide lives at `docs/guides/<NNNN>-<YYYY-MM-DD>-<slug>.md` (`<NNNN>` = its running number within
+`guides/`, zero-padded to 4; date = when first written) and opens with the **shared header** (see
+[`../templates/doc-template.md`](../templates/doc-template.md)). Only the `Status` vocabulary is
+guide-specific:
 
 | Status       | Meaning                                                                         |
 |--------------|---------------------------------------------------------------------------------|

@@ -12,10 +12,12 @@ and ask which one.
 
 Do this:
 
-1. **Resolve the filename** from the type's naming rule. Default `<created_at>-<slug>.md` where
-   `created_at` is today (`YYYY-MM-DD`). For `adr`, use `ADR-<NNNN>-<created_at>-<slug>.md` where `NNNN` is
-   the highest existing ADR number + 1 (zero-padded to 4), never reused. Derive the slug from `$2` or ask
-   for a short title and kebab-case it.
+1. **Resolve the filename** from the type's naming rule. The same rule applies to every type including
+   `adr`: `<NNNN>-<created_at>-<slug>.md` where `created_at` is today (`YYYY-MM-DD`) and `<NNNN>` is the
+   doc's running number within that type's folder, zero-padded to 4: the highest existing `<NNNN>` in
+   `docs/<type>/` + 1, never reused (starts at `0001` for the first doc). For `adr`, that `<NNNN>` is also
+   the ADR number written into the title and Index row. Derive the slug from `$2` or ask for a short title
+   and kebab-case it.
 
 2. **Create the file** by copying `docs/templates/doc-template.md` to `docs/<type>/<filename>`. Fill the
    header: today's date for `Date` and `Last verified`; a sensible starting `Status` from that type's
@@ -26,6 +28,7 @@ Do this:
    `user.name <user.email>` as the likely default but let them override).
 
 4. **Register it**: add a row to `docs/<type>/README.md`'s `## Index` table
-   (`Doc | Status | Owner | What it is`), keeping the table aligned.
+   (`Doc | Status | Owner | What it is`), keeping the table aligned. Insert it in `<NNNN>` order — for a new
+   doc that means appending it at the end, so the table stays in creation order.
 
 5. Report the path and remind the user to fill the body. Keep the file ≤120-col, no trailing whitespace.

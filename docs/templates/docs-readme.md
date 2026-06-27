@@ -32,7 +32,7 @@ order each `<type>/README.md` itself follows is captured in
 standalone docs, so they don't carry the doc header or a lifecycle:
 
 - [`templates/doc-template.md`](templates/doc-template.md) — skeleton for a **single doc**
-  (`<type>/<created_at>-<slug>.md`; ADRs `ADR-<NNNN>-<created_at>-<slug>.md`): `# Title`, a one-line
+  (`<type>/<NNNN>-<created_at>-<slug>.md`): `# Title`, a one-line
   what-it-is, the shared metadata header, then the body. It carries the shared-header field rules every
   doc follows — identical field set, names, and order across all types; only the `Status` vocabulary
   differs per type.
@@ -43,8 +43,12 @@ standalone docs, so they don't carry the doc header or a lifecycle:
 
 ## File naming
 
-Most docs are named `<created_at>-<slug>.md` (`created_at` = `YYYY-MM-DD`, the day it was first written).
-ADRs are the exception: they are named `ADR-<NNNN>-<created_at>-<slug>.md` (e.g.
-`ADR-0001-2026-06-16-pick-a-message-broker.md`). The `ADR-<NNNN>` number is **sequential and never
-reused** — the next ADR takes the highest existing number + 1 — and also appears in the ADR's title and
-index, for cross-references and supersession (see [`adr/README.md`](adr/README.md)).
+Every doc is named `<NNNN>-<created_at>-<slug>.md`, the same rule for all types including ADRs. `<NNNN>` is
+the doc's running number **within its type's folder**, zero-padded to 4 (`0001`, `0002`, …); `created_at` =
+`YYYY-MM-DD`, the day it was first written (e.g. `0001-2026-06-16-cache-invalidation.md`). `<NNNN>` starts
+at `0001` and is **sequential and never reused** — the next doc in that folder takes the highest existing
+`<NNNN>` there + 1, regardless of date. List Index rows in `<NNNN>` order so the table reads in creation
+order.
+
+For ADRs the `<NNNN>` is also the ADR number that appears in the doc's title and index and is used for
+cross-references and supersession (see [`adr/README.md`](adr/README.md)).
