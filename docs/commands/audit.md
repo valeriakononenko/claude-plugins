@@ -37,6 +37,13 @@ Run the audit:
 
 4. **Index drift.** Check each type README `## Index` lists every doc in its dir, with a matching `Status`.
 
-Report a concise table of findings grouped by severity (stale / mismatched / broken-link / index-drift),
+5. **Note hygiene.** `## Update <date>` notes are allowed in `runbooks/` only — flag any in another type
+   (`grep -rln '^## Update ' docs | grep -v '^docs/runbooks/'`); the fix is to fold the content into the body
+   and drop the note. In runbooks, flag notes that broke the rules in `docs/README.md`: more than one note for
+   the same change-set, a note that restates the diff instead of the motivation, a note over 5 lines, or
+   in-branch narrative ("we first tried…", "reverted…", "moved back").
+
+Report a concise table of findings grouped by severity (stale / mismatched / broken-link / index-drift /
+note-hygiene),
 each with the file and the suggested fix. Do NOT edit anything — this is read-only; offer to fix on request.
 For a large tree, delegate the per-doc verification to the `doc-auditor` subagent in parallel.

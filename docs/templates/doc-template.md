@@ -22,6 +22,10 @@ Shared-header rules — identical for every doc type, so all docs read the same 
   type (see the type's own README for its allowed values).
 - `Date`, `Last verified`, `Owner`, and `Status` are required; `Module(s)` and `Related` are free-text.
 - Each doc has exactly one owner — re-assign on handoff rather than leaving it stale.
+- No `## Update <date>` section here. Notes exist only in runbooks, only from a later PR, and only when it
+  carries motivation the diff doesn't show — one note per PR, ≤5 lines (see `Update notes` in ../README.md).
+- Write the final state only, for a reader with no context: short sentences, lists over paragraphs, no
+  in-branch history of what was tried and dropped (see `Writing style` in ../README.md).
 -->
 
 ## <First section>

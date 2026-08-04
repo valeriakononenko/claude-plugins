@@ -52,3 +52,51 @@ order.
 
 For ADRs the `<NNNN>` is also the ADR number that appears in the doc's title and index and is used for
 cross-references and supersession (see [`adr/README.md`](adr/README.md)).
+
+## Writing style
+
+Every doc is written for a reader who has **no prior context** and little time — a newcomer, or you in six
+months:
+
+- Short sentences, plain language, no jargon that isn't defined in the doc itself.
+- Say what it is and why it matters in the first two lines; details after.
+- Prefer a list, a table, or a command block over a paragraph; one action per step.
+- Cut filler: no hedging, no restating the obvious, no "as we can see" narration.
+
+## One branch = one documentation session
+
+A branch (PR) is a single documentation session. A doc describes the **final** state that branch delivers —
+never the path taken to it:
+
+- Something tried and then dropped inside the same branch is **removed from the doc**, not marked as
+  reverted. For the reader it never existed.
+- No session narrative ("first we did A, then replaced it with B", "moved X back"). Git has that history.
+- Exception: an approach the user explicitly asks to keep as a **rejected alternative** (typical for ADRs) —
+  record it once, in a line or two, with the reason it lost.
+- What's left: the motivation and the end result, nothing intermediate.
+
+## Update notes (runbooks only)
+
+`## Update <YYYY-MM-DD>` notes exist in **runbooks** and nowhere else — a runbook describes remediation that
+keeps moving, so *why it moved* is worth recording next to it. The other types don't use notes at all:
+
+| Type      | Instead of a note                                                        |
+|-----------|--------------------------------------------------------------------------|
+| `design/` | Bump `Status` (`poc` → `wip` → `staged` → `done`) and rewrite the body.  |
+| `adr/`    | Append-only: write a new ADR that supersedes it; never patch a decision. |
+| `guides/` | Evergreen: rewrite the steps in place and bump `Last verified`.          |
+
+A runbook gets a note only when a **later** change acts on what it already describes **and** carries
+motivation worth recording — the *why* a reader can't get from the diff. If the change speaks for itself,
+update the body and the header and add no note:
+
+- **One note per change-set (PR), not per edit.** If this PR already added a note to this runbook, rewrite
+  that note instead of appending a second one.
+- **A runbook created in the same PR gets no note at all** — its body *is* the change. Notes start with the
+  next PR that touches it.
+- **Motivation only, not a changelog.** Why it changed / what forced it / what it now means for the reader.
+  What exactly changed is in git — don't restate it.
+- **Keep it short:** bullet points (preferred) or prose, at most 5 lines either way. A single trailing
+  reference (PR #, issue) is fine.
+- Append notes at the end of the runbook, newest last. Steps that an **earlier, already-merged** change made
+  obsolete are annotated in place rather than deleted; steps this branch itself invalidated are just deleted.

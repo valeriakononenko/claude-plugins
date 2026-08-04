@@ -21,7 +21,8 @@ Do this:
 
 2. **Create the file** by copying `docs/templates/doc-template.md` to `docs/<type>/<filename>`. Fill the
    header: today's date for `Date` and `Last verified`; a sensible starting `Status` from that type's
-   lifecycle; leave `Module(s)`/`Related` as prompts if unknown.
+   lifecycle; leave `Module(s)`/`Related` as prompts if unknown. No `## Update <date>` section in a new doc —
+   its body *is* the change, and only runbooks ever carry notes at all.
 
 3. **Owner = the real author**, derived from git, NOT the current user by default. For a brand-new file
    there is no git history yet, so confirm the intended owner with the user (offer the current git
@@ -31,4 +32,5 @@ Do this:
    (`Doc | Status | Owner | What it is`), keeping the table aligned. Insert it in `<NNNN>` order — for a new
    doc that means appending it at the end, so the table stays in creation order.
 
-5. Report the path and remind the user to fill the body. Keep the file ≤120-col, no trailing whitespace.
+5. Report the path and remind the user to fill the body — final state only, written for a reader with no
+   context (see `Writing style` in `docs/README.md`). Keep the file ≤120-col, no trailing whitespace.

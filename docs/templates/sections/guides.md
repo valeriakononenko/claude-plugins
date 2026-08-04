@@ -26,3 +26,6 @@ guide-specific:
 A guide's value is being correct — re-verify `current` guides periodically and bump `Last verified`. `Owner`
 is the one person accountable for keeping the guide accurate; re-assign on handoff rather than leaving it
 stale.
+
+**No `## Update <date>` notes** in a guide (they belong to runbooks only): a guide is evergreen — rewrite the
+steps in place so the reader always sees the current procedure, and bump `Last verified`.

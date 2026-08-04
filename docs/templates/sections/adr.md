@@ -30,5 +30,9 @@ ADR-specific:
   number + 1. The number leads the filename and is also written `ADR-<NNNN>` in the `# Title` and the Index
   row.
 - **Append-only:** don't rewrite an accepted ADR to reflect a new decision — write a new ADR and set the
-  old one's `Status` to `superseded by ADR-NNNN`, with a `Related` link both ways.
+  old one's `Status` to `superseded by ADR-NNNN`, with a `Related` link both ways. And **no `## Update <date>`
+  notes** (those belong to runbooks only): supersession *is* the update mechanism here.
 - **One decision per ADR:** keep them small and focused so they can be superseded independently.
+- **Rejected alternatives, not attempts:** an ADR may name the options that lost — one or two lines each with
+  the reason. That's the record of a *decision*, not a log of what was tried and undone inside the branch
+  (see `One branch = one documentation session` in [`../README.md`](../README.md)).
