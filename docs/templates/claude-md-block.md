@@ -10,10 +10,7 @@ safer than re-deriving it from the code.
 
 **After** a change that implements, obsoletes, or otherwise acts on what a doc describes, update that doc in
 the same change — bump its `Status` and `Last verified`, fix its README `Index` row, and bring the body to its
-final state. `## Update <date>` notes exist **only in runbooks** (design specs move by `Status`, ADRs are
-superseded, guides are rewritten in place), and only when the change carries motivation the diff doesn't show:
-**one per PR**, why-not-what, ≤5 lines, bullet points preferred. A runbook **created** in the same PR gets no
-note. The `docs` skill does this for you.
+final state.
 
 A branch (PR) is **one documentation session**: docs record the final state it delivers, not the route. What
 was tried and dropped inside the branch is deleted from the doc, not annotated as reverted — unless you ask

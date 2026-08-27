@@ -50,20 +50,7 @@ After the header, a runbook lays out:
 ## Related
 
 Links to ADRs, related runbooks, tickets.
-
-<!-- only from a later PR, and only if the motivation isn't in the diff — see Update notes below -->
-## Update <YYYY-MM-DD>
-
-- …
 ```
-
-## Update notes
-
-Runbooks are the **only** type that carries `## Update <YYYY-MM-DD>` notes — remediation keeps moving, so the
-*why* behind a change is worth recording next to the procedure. A note is added only when that motivation
-isn't readable from the diff: one per PR, motivation not changelog, ≤5 lines, bullet points preferred, newest
-last. A runbook created in the same PR gets none. Full rules: `Update notes` in
-[`../README.md`](../README.md).
 
 ## Writing style
 
@@ -76,6 +63,3 @@ be written:
 - **No filler.** Plain language, short sentences, imperative steps. Drop restating the obvious, hedging, and
   "as we can see" narration.
 - Prefer a list or a command block over a paragraph; keep a step to one action.
-
-The shared rules these follow — `Writing style`, `One branch = one documentation session`, and
-`Update notes` — live in [`../README.md`](../README.md).

@@ -21,10 +21,6 @@ For each doc:
     - `staged`/`open`/`wip`/`draft` → check whether the code or infra signal it depends on has already moved.
 3. Note if `Last verified` is old relative to recent changes touching its `Module(s)`.
 4. Check the doc's local links resolve.
-5. Check `## Update <date>` note hygiene against the rules in `docs/README.md`: notes are allowed in
-   `runbooks/` only — any note in another type is a finding. In a runbook: at most one note per change-set,
-   motivation rather than a restated diff, ≤5 lines, no in-branch narrative ("we first tried…", "reverted…",
-   "moved back"). Also flag body text that reads as session history rather than the final state.
 
 Return a compact structured report per doc: `path`, `declared_status`, `verdict` (one of `ok`, `stale`,
 `status-mismatch`, `broken-link`, `note-hygiene`), the specific evidence (the grep/git result that proves it), and a

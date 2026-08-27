@@ -21,8 +21,7 @@ Do this:
 
 2. **Create the file** by copying `docs/templates/doc-template.md` to `docs/<type>/<filename>`. Fill the
    header: today's date for `Date` and `Last verified`; a sensible starting `Status` from that type's
-   lifecycle; leave `Module(s)`/`Related` as prompts if unknown. No `## Update <date>` section in a new doc —
-   its body *is* the change, and only runbooks ever carry notes at all.
+   lifecycle; leave `Module(s)`/`Related` as prompts if unknown.
 
 3. **Owner = the real author**, derived from git, NOT the current user by default. For a brand-new file
    there is no git history yet, so confirm the intended owner with the user (offer the current git

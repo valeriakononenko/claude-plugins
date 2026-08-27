@@ -117,10 +117,7 @@ A written Status reflects the moment it was written — **verify before trusting
 - A `staged`/`open` doc → check the code/infra signal it depends on actually hasn't changed.
 - When a code change you just made (or learned shipped) implements, obsoletes, or otherwise acts on what a
   doc describes, update that doc **in the same change, proactively — without being asked**: bump its
-  `Status` **and** `Last verified`, update its README Index row, and bring the body to its final state. For a
-  **runbook** also consider an `## Update <date>` note, per the rules below; other types never get one. Steps
-  an **earlier, already-merged** change made obsolete get annotated in place rather than deleted; steps this
-  branch itself invalidated are simply deleted (see below).
+  `Status` **and** `Last verified`, update its README Index row, and bring the body to its final state.
 
 ## One branch = one documentation session
 
@@ -140,8 +137,7 @@ Docs record the **final** state that branch delivers, never the route to it:
    Git carries that.
 4. Only exception: the user explicitly asks to keep a **rejected approach** (typical for ADRs) — one or two
    lines, with the reason it lost. Not a diary of the attempt.
-5. Applies to Update notes too: one note per branch, rewritten in place as the branch evolves.
-6. What survives: the motivation and the end result. Nothing intermediate.
+5. What survives: the motivation and the end result. Nothing intermediate.
 
 ## Writing style
 
@@ -154,39 +150,14 @@ Write for a reader with **no context and no time** — a newcomer, or the same p
 
 Load-bearing for runbooks especially — they're read under pressure.
 
-## Update notes (runbooks only, one per PR, motivation only)
-
-`## Update <YYYY-MM-DD>` notes belong to **runbooks and nothing else** — remediation keeps moving, so *why it
-moved* is worth recording next to it. Never add one to a design spec, ADR, guide, or custom-section doc:
-
 - `design/` → bump `Status` (`poc` → `wip` → `staged` → `done`) and rewrite the body.
 - `adr/` → append-only: a new ADR supersedes it; never patch a decision.
+- `runbooks/` → bump `Status` and rewrite the procedure into what to do now.
 - `guides/` → evergreen: rewrite the steps in place and bump `Last verified`.
-- custom sections → follow the same default (no notes) unless that section's README says otherwise.
+- custom sections → same default, unless that section's README says otherwise.
 
-In a runbook, keep notes rare and thin:
-
-1. **Add one only if the motivation is worth recording** — the *why* behind the change that a reader can't
-   get from `git diff`. If the diff speaks for itself, the runbook gets **no note**; just update the body and
-   the header.
-2. **One note per change-set (PR), not per edit.** Check the branch diff for this doc (see *One branch = one
-   documentation session*) — if this branch already added a note, rewrite that note instead of adding another.
-3. **A runbook created in this same PR gets no note.** Its body *is* the change; notes start with the next PR
-   that touches it.
-4. **Write the motivation, not the diff.** Why it changed / what forced it / what it now means for the
-   reader. What exactly changed is already in git — never restate it.
-5. **Bullet points preferred**, prose allowed; at most 5 lines either way. One trailing reference (PR #,
-   issue) is fine.
-6. Append at the end of the runbook, newest last.
-
-Example note at the end of a runbook:
-
-```markdown
-## Update 2026-08-04
-
-- Retry limit was hit in production, so the backoff described here no longer holds.
-- Kept the manual fallback: the new path only covers idempotent calls (#412).
-```
+Motivation a reader can't get from `git diff` is still worth writing — put it **in the body**, as a line in
+the step or section it explains.
 
 ## Filing a plan's outcome under the right doc
 
@@ -195,10 +166,8 @@ When you produce or execute a plan, make it land in the docs:
 1. **Map each work item to a doc type** using the *purpose* lines in `docs/README.md` (a build decision →
    `design/` or `adr/`; an off-happy-path fix → `runbooks/`; a routine procedure → `guides/`). Work with no
    home yet → create a stub via *Creating a doc* so there is always a doc to attribute it to.
-2. **Record the outcome in the doc body** — what now holds, in final form. Only in a **runbook**, and only if
-   the motivation isn't readable from the diff, add a dated `## Update <date>` note per *Update notes* above
-   (one per PR, ≤5 lines; a runbook created in this same PR gets none). Plan items dropped along the way are
-   not documented at all.
+2. **Record the outcome in the doc body** — what now holds, in final form. Motivation the diff doesn't 
+   show goes into the section it explains. Plan items dropped along the way are not documented at all.
 3. **Drive the status**: bump the doc's `Status` and `Last verified`, and update its README Index row. An
    `in PR #NNN` becomes `applied <date>` when the PR merges; a `wip` design becomes `done` when it ships.
 4. Keep the plan artifact itself out of `docs/` (it's ephemeral); link to it from the doc's `Related` if

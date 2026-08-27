@@ -12,8 +12,7 @@ layout, add your own doc sections, file plan outcomes under the right doc, and k
 - Reusable `templates/` for new docs and new sections.
 - A `docs` skill that keeps statuses honest, files plan outcomes, and fixes references on rename/move.
 - **Branch-scoped writing rules:** one branch (PR) = one documentation session, so a doc records the final
-  state it delivers — not what was tried and dropped along the way. `## Update <date>` notes live in
-  `runbooks/` only, and stay rare and thin: one per PR, motivation only, ≤5 lines.
+  state it delivers — not what was tried and dropped along the way.
 - An **AI-navigation block in `CLAUDE.md`** (added on `init`) so Claude checks the relevant doc before
   working on an area, and updates it afterwards — with grep recipes to find docs by module/keyword.
 

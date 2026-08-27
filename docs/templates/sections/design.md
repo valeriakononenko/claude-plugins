@@ -28,6 +28,3 @@ design-specific:
 Keep the header current — bump `Status` as the work moves, and `Last verified` whenever you re-check the
 spec against reality. `Owner` is the one person accountable for driving the design; re-assign on handoff
 rather than leaving it stale.
-
-**No `## Update <date>` notes** in a design spec (they belong to runbooks only): the `Status` shows where the
-work stands, and the body is rewritten to describe what is now being built.

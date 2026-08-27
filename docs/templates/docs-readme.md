@@ -75,28 +75,13 @@ never the path taken to it:
   record it once, in a line or two, with the reason it lost.
 - What's left: the motivation and the end result, nothing intermediate.
 
-## Update notes (runbooks only)
+| Type        | Instead of a note                                                        |
+|-------------|--------------------------------------------------------------------------|
+| `design/`   | Bump `Status` (`poc` → `wip` → `staged` → `done`) and rewrite the body.  |
+| `adr/`      | Append-only: write a new ADR that supersedes it; never patch a decision. |
+| `runbooks/` | Bump `Status` and rewrite the procedure into what to do now.             |
+| `guides/`   | Evergreen: rewrite the steps in place and bump `Last verified`.          |
 
-`## Update <YYYY-MM-DD>` notes exist in **runbooks** and nowhere else — a runbook describes remediation that
-keeps moving, so *why it moved* is worth recording next to it. The other types don't use notes at all:
-
-| Type      | Instead of a note                                                        |
-|-----------|--------------------------------------------------------------------------|
-| `design/` | Bump `Status` (`poc` → `wip` → `staged` → `done`) and rewrite the body.  |
-| `adr/`    | Append-only: write a new ADR that supersedes it; never patch a decision. |
-| `guides/` | Evergreen: rewrite the steps in place and bump `Last verified`.          |
-
-A runbook gets a note only when a **later** change acts on what it already describes **and** carries
-motivation worth recording — the *why* a reader can't get from the diff. If the change speaks for itself,
-update the body and the header and add no note:
-
-- **One note per change-set (PR), not per edit.** If this PR already added a note to this runbook, rewrite
-  that note instead of appending a second one.
-- **A runbook created in the same PR gets no note at all** — its body *is* the change. Notes start with the
-  next PR that touches it.
-- **Motivation only, not a changelog.** Why it changed / what forced it / what it now means for the reader.
-  What exactly changed is in git — don't restate it.
-- **Keep it short:** bullet points (preferred) or prose, at most 5 lines either way. A single trailing
-  reference (PR #, issue) is fine.
-- Append notes at the end of the runbook, newest last. Steps that an **earlier, already-merged** change made
-  obsolete are annotated in place rather than deleted; steps this branch itself invalidated are just deleted.
+Motivation a reader can't get from the diff still belongs in the doc — as a line in the section it explains. 
+Steps that an **earlier, already-merged** change made obsolete are annotated
+in place rather than deleted; steps this branch itself invalidated are just deleted.
