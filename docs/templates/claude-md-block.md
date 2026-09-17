@@ -21,6 +21,6 @@ Find the right doc:
 
 - **Taxonomy + file naming:** `docs/README.md` (the source of truth for doc types).
 - **Browse by type:** the `## Index` table in each `docs/<type>/README.md`.
-- **By module/scope:** `grep -rn '^- \*\*Module(s):' docs` then match the area you're touching.
+- **By module/scope:** `grep -rn '^- \*\*Modules:' docs` then match the area you're touching.
 - **By keyword:** `grep -rni '<keyword>' docs`.
 <!-- docs:end -->

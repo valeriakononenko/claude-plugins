@@ -26,7 +26,7 @@ Run the audit:
    - A doc that names a symbol/file/flag → `grep`/`git log` to confirm it still exists. Gone/renamed → flag
      the doc as stale.
    - `staged`/`open`/`wip` → check the code or infra signal it waits on hasn't already changed.
-   - `Last verified` far in the past relative to recent changes in its `Module(s)` → flag for re-verify.
+   - `Last verified` far in the past relative to recent changes in its `Modules` → flag for re-verify.
 
 3. **Broken links.** For each README, check local links resolve:
    ```bash

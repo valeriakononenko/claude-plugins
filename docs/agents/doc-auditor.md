@@ -12,14 +12,14 @@ what it claims still matches reality. **You never edit files** — you report fi
 
 For each doc:
 
-1. Read its header — `Status`, `Owner`, `Last verified`, `Module(s)`, `Related`.
+1. Read its header — `Status`, `Owner`, `Last verified`, `Modules`, `Related`.
 2. Verify the `Status` against reality:
     - `in PR #NNN` → `git log --oneline | grep '#NNN'`; if merged and the code landed, the real status is
       `applied`/`done`.
     - Any concrete claim — a named symbol, file, flag, version, endpoint — `grep`/`git log` to confirm it
       still exists as described. Renamed/removed → the doc is stale.
     - `staged`/`open`/`wip`/`draft` → check whether the code or infra signal it depends on has already moved.
-3. Note if `Last verified` is old relative to recent changes touching its `Module(s)`.
+3. Note if `Last verified` is old relative to recent changes touching its `Modules`.
 4. Check the doc's local links resolve.
 
 Return a compact structured report per doc: `path`, `declared_status`, `verdict` (one of `ok`, `stale`,

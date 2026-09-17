@@ -6,7 +6,7 @@
 - **Last verified:** <YYYY-MM-DD>   <!-- when contents were last checked against reality -->
 - **Owner:** Name <email>           <!-- the one person accountable for this doc -->
 - **Status:** <value>               <!-- type-specific lifecycle value — see the type's README -->
-- **Module(s):** …                  <!-- affected modules / scope -->
+- **Modules:** …                    <!-- affected modules / scope -->
 - **Related:** …                    <!-- links: issues, ADRs, runbooks, other repos, tickets -->
 
 <!--
@@ -20,7 +20,7 @@ To start a docs/<type>/README.md instead, use doc-section-template.md.
 Shared-header rules — identical for every doc type, so all docs read the same way:
 - Field set, names, and order are identical across all types; only the `Status` vocabulary differs per
   type (see the type's own README for its allowed values).
-- `Date`, `Last verified`, `Owner`, and `Status` are required; `Module(s)` and `Related` are free-text.
+- `Date`, `Last verified`, `Owner`, and `Status` are required; `Modules` and `Related` are free-text.
 - Each doc has exactly one owner — re-assign on handoff rather than leaving it stale.
 - Write the final state only, for a reader with no context: short sentences, lists over paragraphs, no
   in-branch history of what was tried and dropped (see `Writing style` in ../README.md).

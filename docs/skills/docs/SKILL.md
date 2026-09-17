@@ -62,8 +62,8 @@ explain the *why* (design/ADR) or the *gotcha* (runbook). Find it fast without r
 
 - **Browse by type:** the `## Index` table in each `docs/<type>/README.md` (`Doc | Status | Owner | What it
   is`) — the quickest overview of what exists.
-- **By module/scope:** `grep -rn '^- \*\*Module(s):' docs` then match the area you're touching. The
-  `Module(s)` header field is the primary navigation key — keep it filled when creating docs.
+- **By module/scope:** `grep -rn '^- \*\*Modules:' docs` then match the area you're touching. The
+  `Modules` header field is the primary navigation key — keep it filled when creating docs.
 - **By keyword:** `grep -rni '<keyword>' docs`.
 - **Follow `Related`:** a doc's `Related` line links to the ADRs/runbooks/specs around it.
 
@@ -77,7 +77,7 @@ The project's `CLAUDE.md` carries a docs block pointing here (added by `/docs:in
 - **Last verified:** when contents were last checked against reality   ← bump on every real review
 - **Owner:**         exactly ONE accountable person, Name <email>
 - **Status:**        type-specific value (read the type README)
-- **Module(s):**     scope (free-text)
+- **Modules:**       scope (free-text)
 - **Related:**       links (free-text)
 ```
 
