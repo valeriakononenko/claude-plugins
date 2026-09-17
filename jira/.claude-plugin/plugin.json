@@ -1,0 +1,15 @@
+{
+  "name": "jira",
+  "version": "0.1.0",
+  "description": "Create Jira issues managers and engineers can both read: business-value summary, business problem before technical details, guided project/assignee/epic/links/labels questions, confirmed draft, ADF description via REST.",
+  "author": {
+    "name": "Valeria Kononenko"
+  },
+  "keywords": [
+    "jira",
+    "atlassian",
+    "tickets",
+    "adf",
+    "issue-tracking"
+  ]
+}

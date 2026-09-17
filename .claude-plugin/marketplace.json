@@ -8,6 +8,11 @@
       "name": "docs",
       "source": "./docs",
       "description": "Bring a consistent docs/ system to any project: scaffold the layout, add custom doc sections, file plan outcomes under the right doc, and keep statuses honest."
+    },
+    {
+      "name": "jira",
+      "source": "./jira",
+      "description": "Create Jira issues managers and engineers can both read: business-value summary, business problem before technical details, guided project/assignee/epic/links/labels questions, confirmed draft, ADF description via REST."
     }
   ]
 }

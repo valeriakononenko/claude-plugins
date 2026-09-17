@@ -6,10 +6,13 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
 - **[docs](docs/)** — bring a consistent `docs/` system to any project: scaffold the layout,
   add custom doc sections, file plan outcomes under the right doc, and keep doc statuses honest.
+- **[jira](jira/)** — create Jira issues managers and engineers can both read: business-value summary, business
+  problem before technical details, guided assignee/epic/links/labels questions, confirmed draft, ADF via REST.
 
 ## Install
 
 ```
 /plugin marketplace add valeriakononenko/claude-plugins
 /plugin install docs@divergence082-plugins
+/plugin install jira@divergence082-plugins
 ```
