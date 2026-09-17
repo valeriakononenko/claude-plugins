@@ -19,9 +19,9 @@ Markdown-lite → ADF conversion, issue creation and linking. Python 3 stdlib on
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/ticket/scripts/jira_issue.py" <command> …
 ```
 
-Environment: `JIRA_SITE` (`https://<org>.atlassian.net`), `JIRA_EMAIL`, `JIRA_TOKEN` (required) and
-`JIRA_PROJECT_KEY` (optional default project to offer). Read from the environment, then `./.env`, then
-`~/.jira.env`. If `whoami` fails, tell the user which variable is missing and stop; never guess a site.
+Environment: `JIRA_ORG` (the `<org>` in `https://<org>.atlassian.net`), `JIRA_EMAIL`, `JIRA_TOKEN` (required)
+and `JIRA_PROJECT_KEY` (optional default project to offer). Read from the environment, then `./.env`, then
+`~/.jira.env`. If `whoami` fails, tell the user which variable is missing and stop; never guess the org.
 
 ## Writing rules
 

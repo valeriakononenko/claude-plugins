@@ -29,10 +29,10 @@ The script authenticates with an Atlassian API token over basic auth. Provide th
 `./.env` in the project you work from, or `~/.jira.env`:
 
 ```
-JIRA_SITE=https://<your-org>.atlassian.net
+JIRA_ORG=<your-org>          # the <your-org> in https://<your-org>.atlassian.net
 JIRA_EMAIL=you@example.com
 JIRA_TOKEN=<Atlassian API token>
-JIRA_PROJECT_KEY=SHOP    # optional: default project to offer
+JIRA_PROJECT_KEY=SHOP        # optional: default project to offer
 ```
 
 Create the token at <https://id.atlassian.com/manage-profile/security/api-tokens>. Check it works:

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Jira Cloud REST v3 helper for the jira:ticket skill: lookups, ADF conversion, issue creation and linking.
 
-Credentials come from JIRA_SITE, JIRA_EMAIL and JIRA_TOKEN (environment first, then ./.env, then ~/.jira.env).
-JIRA_SITE is the Atlassian site URL; JIRA_PROJECT_KEY is the default project offered to the user.
+Credentials come from JIRA_ORG, JIRA_EMAIL and JIRA_TOKEN (environment first, then ./.env, then ~/.jira.env).
+JIRA_ORG is the Atlassian Cloud org, i.e. <org> in https://<org>.atlassian.net; JIRA_PROJECT_KEY is the
+default project offered to the user.
 Every command prints JSON to stdout so the calling agent can read it back.
 """
 import argparse
@@ -16,7 +17,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-REQUIRED_KEYS = ("JIRA_SITE", "JIRA_EMAIL", "JIRA_TOKEN")
+REQUIRED_KEYS = ("JIRA_ORG", "JIRA_EMAIL", "JIRA_TOKEN")
 OPTIONAL_KEYS = ("JIRA_PROJECT_KEY",)
 DOTENV_CANDIDATES = (".env", os.path.expanduser("~/.jira.env"))
 ACCOUNT_ID_RE = re.compile(r"^[0-9a-f]{24}$|^[0-9]+:[0-9a-f-]{36}$")
@@ -64,15 +65,15 @@ def credentials():
     if missing:
         sys.exit(
             f"Missing {', '.join(missing)}. Export them or put them in ./.env or ~/.jira.env "
-            f"(JIRA_SITE like https://<org>.atlassian.net, JIRA_TOKEN = Atlassian API token; "
+            f"(JIRA_ORG = <org> from https://<org>.atlassian.net, JIRA_TOKEN = Atlassian API token; "
             f"optional JIRA_PROJECT_KEY)."
         )
     return env
 
 
 class Jira:
-    def __init__(self, site, email, token, default_project=""):
-        self.site = site.rstrip("/")
+    def __init__(self, org, email, token, default_project=""):
+        self.site = f"https://{org.strip()}.atlassian.net"
         self.default_project = default_project or None
         self.auth = base64.b64encode(f"{email}:{token}".encode()).decode()
 
@@ -480,7 +481,7 @@ def main():
     jira = None
     if not offline:
         env = credentials()
-        jira = Jira(env["JIRA_SITE"], env["JIRA_EMAIL"], env["JIRA_TOKEN"], env["JIRA_PROJECT_KEY"])
+        jira = Jira(env["JIRA_ORG"], env["JIRA_EMAIL"], env["JIRA_TOKEN"], env["JIRA_PROJECT_KEY"])
     try:
         args.fn(jira, args)
     except JiraError as e:
