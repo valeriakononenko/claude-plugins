@@ -6,8 +6,9 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
 - **[docs](docs/)** — bring a consistent `docs/` system to any project: scaffold the layout,
   add custom doc sections, file plan outcomes under the right doc, and keep doc statuses honest.
-- **[jira](jira/)** — create Jira issues managers and engineers can both read: business-value summary, business
-  problem before technical details, guided assignee/epic/links/labels questions, confirmed draft, ADF via REST.
+- **[jira](jira/)** — write Jira managers and engineers can both read: issues with a business-value summary and the
+  business problem before the technical details, and reports posted as comments with a verdict panel, the facts
+  behind it and the actions. ADF via REST.
 
 ## Install
 

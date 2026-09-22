@@ -1,7 +1,7 @@
 {
   "name": "jira",
-  "version": "0.1.1",
-  "description": "Create Jira issues managers and engineers can both read: business-value summary, business problem before technical details, guided project/assignee/epic/links/labels questions, confirmed draft, ADF description via REST.",
+  "version": "0.2.0",
+  "description": "Write Jira that managers and engineers both read: issues with a business-value summary and the business problem before the technical details, and comments that report an investigation as a verdict panel, the facts behind it and the actions — ADF via REST.",
   "author": {
     "name": "Valeria Kononenko"
   },
@@ -9,6 +9,7 @@
     "jira",
     "atlassian",
     "tickets",
+    "reports",
     "adf",
     "issue-tracking"
   ]
