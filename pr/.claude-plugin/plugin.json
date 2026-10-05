@@ -1,7 +1,7 @@
 {
   "name": "pr",
-  "version": "0.2.0",
-  "description": "Shepherd an open pull request to green: fix failing GitHub Actions at the root cause, work through every review, and hand architectural and trade-off calls back to you as weighed options.",
+  "version": "0.3.0",
+  "description": "Shepherd an open pull request to merge: fix failing GitHub Actions at the root cause, work through every review, rebase when the base runs ahead, and hand architectural and trade-off calls back to you as weighed options.",
   "author": {
     "name": "Valeria Kononenko"
   },
