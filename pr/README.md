@@ -12,12 +12,17 @@ works through every review, and hands the calls that are yours to make back to y
 - **Reviews triaged** against the current code, human and bot alike: *fix* what has one obvious answer, *answer*
   what is mistaken or already handled with evidence, *decide* — architecture, contracts, dependencies, trade-offs,
   scope — goes back to you.
+- **Review fixes test first**: a finding about behavior is first reproduced by a failing test, then fixed, and the
+  test ships in the same commit as the fix. A test that passes on the current code turns the fix into an answer.
+- **Addressed comments closed properly**: after the push, bot threads are resolved *and* hidden, bot findings posted
+  as top-level comments and bot review bodies are hidden as Resolved (they have no resolve), and a second `state`
+  confirms nothing addressed is left on screen. People's threads get a reply and stay theirs to resolve.
 - **Decisions as briefs**: the reviewer's point, two or three options with benefit, cost and effort, "keep as is"
   when defensible, and one recommendation — then a question you answer in one click.
 - **Guardrails**: new commits on the PR branch only — no force-push, no merge, no history rewrite — and CI is never
   made green by weakening it (no skipped tests, `continue-on-error`, `--no-verify` or lowered thresholds).
-- A dependency-free Python script on top of `gh` that returns the whole PR state as one JSON document and replies to
-  and resolves review threads.
+- A dependency-free Python script on top of `gh` that returns the whole PR state as one JSON document, replies to
+  and resolves review threads, and hides comments and review bodies.
 
 ## Install
 
@@ -58,3 +63,5 @@ All commands print JSON. `<pr>` is a number, a URL or a branch; without it, the 
 | `logs [<pr>] [--repo …] [--lines N]` | Failed-step log tail of every failed GitHub Actions job on the head commit   |
 | `reply <threadId> <body\|->`         | Reply inside a review thread                                                 |
 | `resolve <threadId>`                 | Resolve a review thread                                                      |
+| `close <threadId> [--reason R]`      | Resolve a review thread and hide it (`RESOLVED` by default)                  |
+| `hide <id> [--reason R]`             | Hide a comment or review body, or change the reason of a hidden one          |

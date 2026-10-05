@@ -3,8 +3,9 @@
 
 One `state` call returns everything the watch loop needs in a single JSON document: the PR head, every check on the
 head commit with its outcome, the unresolved review threads, the latest review per reviewer, the top-level comments
-and the reviewers still pending. `logs` prints the failing part of each failed GitHub Actions job, `reply` and
-`resolve` answer and close a review thread.
+and the reviewers still pending. `logs` prints the failing part of each failed GitHub Actions job, `reply` answers a
+review thread, `resolve` resolves one, `close` resolves it and hides its comments, and `hide` minimizes any comment or
+review body.
 
 Requires an authenticated gh (`gh auth status`). Every command prints JSON to stdout.
 """
@@ -15,6 +16,7 @@ import sys
 
 sys.dont_write_bytecode = True
 
+HIDE_REASONS = ("RESOLVED", "OUTDATED", "DUPLICATE", "OFF_TOPIC")
 FAILED_CONCLUSIONS = {"FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED", "ERROR"}
 PASSED_CONCLUSIONS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 PENDING_STATES = {"QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED", "EXPECTED"}
@@ -40,10 +42,16 @@ query($owner: String!, $repo: String!, $number: Int!) {
       } } } } } }
       reviewThreads(first: 100) { nodes {
         id isResolved isOutdated path line originalLine
-        comments(first: 50) { nodes { id databaseId author { login } body createdAt url } }
+        comments(first: 50) { nodes {
+          id databaseId author { __typename login } body createdAt isMinimized minimizedReason url
+        } }
       } }
-      reviews(last: 50) { nodes { id author { login } state body submittedAt commit { oid } url } }
-      comments(last: 50) { nodes { id databaseId author { login } body createdAt isMinimized url } }
+      reviews(last: 50) { nodes {
+        id author { __typename login } state body submittedAt commit { oid } isMinimized minimizedReason url
+      } }
+      comments(last: 50) { nodes {
+        id databaseId author { __typename login } body createdAt isMinimized minimizedReason url
+      } }
     }
   }
 }
@@ -59,6 +67,24 @@ mutation($thread: ID!, $body: String!) {
 
 RESOLVE_MUTATION = """
 mutation($thread: ID!) { resolveReviewThread(input: {threadId: $thread}) { thread { id isResolved } } }
+"""
+
+THREAD_COMMENTS_QUERY = """
+query($id: ID!) { node(id: $id) { ... on PullRequestReviewThread { comments(first: 1) { nodes { id } } } } }
+"""
+
+MINIMIZED_QUERY = """
+query($id: ID!) { node(id: $id) { ... on Minimizable { isMinimized minimizedReason } } }
+"""
+
+UNMINIMIZE_MUTATION = """
+mutation($id: ID!) { unminimizeComment(input: {subjectId: $id}) { unminimizedComment { isMinimized } } }
+"""
+
+MINIMIZE_MUTATION = """
+mutation($id: ID!, $reason: ReportedContentClassifiers!) {
+  minimizeComment(input: {subjectId: $id, classifier: $reason}) { minimizedComment { isMinimized minimizedReason } }
+}
 """
 
 
@@ -109,6 +135,15 @@ def login(actor):
     return (actor or {}).get("login") or "ghost"
 
 
+def is_bot(actor):
+    return (actor or {}).get("__typename") == "Bot"
+
+
+def comment_entry(c):
+    return {"id": c["id"], "author": login(c["author"]), "isBot": is_bot(c["author"]), "body": c["body"],
+            "createdAt": c["createdAt"], "isMinimized": c["isMinimized"], "url": c["url"]}
+
+
 def check_entry(node):
     if node["__typename"] == "StatusContext":
         state = node["state"]
@@ -136,7 +171,7 @@ def check_entry(node):
 
 
 def latest_reviews(nodes):
-    """Keep the newest review per author, plus every review that carries a body."""
+    """Keep the newest review per author, plus every review whose body is still visible."""
     newest = {}
     for review in nodes:
         newest[login(review["author"])] = review["id"]
@@ -144,15 +179,17 @@ def latest_reviews(nodes):
         {
             "id": r["id"],
             "author": login(r["author"]),
+            "isBot": is_bot(r["author"]),
             "state": r["state"],
             "body": r["body"],
             "commit": (r.get("commit") or {}).get("oid"),
             "submittedAt": r["submittedAt"],
             "url": r["url"],
+            "isMinimized": r["isMinimized"],
             "latest": newest[login(r["author"])] == r["id"],
         }
         for r in nodes
-        if newest[login(r["author"])] == r["id"] or r["body"].strip()
+        if newest[login(r["author"])] == r["id"] or (r["body"].strip() and not r["isMinimized"])
     ]
 
 
@@ -169,14 +206,17 @@ def collect_state(owner, name, number):
             "path": t["path"],
             "line": t["line"] or t["originalLine"],
             "isOutdated": t["isOutdated"],
-            "comments": [
-                {"id": c["id"], "author": login(c["author"]), "body": c["body"], "createdAt": c["createdAt"],
-                 "url": c["url"]}
-                for c in t["comments"]["nodes"]
-            ],
+            "comments": [comment_entry(c) for c in t["comments"]["nodes"]],
         }
         for t in pr["reviewThreads"]["nodes"]
         if not t["isResolved"]
+    ]
+    resolved_visible = [
+        {"threadId": t["id"], "path": t["path"], "line": t["line"] or t["originalLine"],
+         "commentId": t["comments"]["nodes"][0]["id"], "author": login(t["comments"]["nodes"][0]["author"])}
+        for t in pr["reviewThreads"]["nodes"]
+        if t["isResolved"] and t["comments"]["nodes"]
+        and is_bot(t["comments"]["nodes"][0]["author"]) and not t["comments"]["nodes"][0]["isMinimized"]
     ]
     pending_reviewers = [
         (r["requestedReviewer"] or {}).get("login") or (r["requestedReviewer"] or {}).get("slug")
@@ -203,13 +243,9 @@ def collect_state(owner, name, number):
         },
         "checks": {"rollup": rollup.get("state"), **summary, "items": checks},
         "unresolvedThreads": threads,
+        "resolvedVisibleThreads": resolved_visible,
         "reviews": latest_reviews(pr["reviews"]["nodes"]),
-        "comments": [
-            {"id": c["id"], "author": login(c["author"]), "body": c["body"], "createdAt": c["createdAt"],
-             "url": c["url"]}
-            for c in pr["comments"]["nodes"]
-            if not c["isMinimized"]
-        ],
+        "comments": [comment_entry(c) for c in pr["comments"]["nodes"] if not c["isMinimized"]],
     }
 
 
@@ -251,6 +287,30 @@ def cmd_resolve(args):
     emit(graphql(RESOLVE_MUTATION, thread=args.thread)["resolveReviewThread"]["thread"])
 
 
+def minimize(subject, reason):
+    """Hide a comment or review body; re-classifies an already hidden one, which minimizeComment alone ignores."""
+    current = graphql(MINIMIZED_QUERY, id=subject)["node"] or {}
+    if "isMinimized" not in current:
+        raise GhError(f"{subject} is not a comment or review that can be hidden")
+    if current["isMinimized"]:
+        if (current.get("minimizedReason") or "").upper() == reason:
+            return {"id": subject, **current}
+        graphql(UNMINIMIZE_MUTATION, id=subject)
+    done = graphql(MINIMIZE_MUTATION, id=subject, reason=reason)["minimizeComment"]["minimizedComment"]
+    return {"id": subject, **done}
+
+
+def cmd_hide(args):
+    emit(minimize(args.subject, args.reason))
+
+
+def cmd_close(args):
+    thread = graphql(RESOLVE_MUTATION, thread=args.thread)["resolveReviewThread"]["thread"]
+    node = graphql(THREAD_COMMENTS_QUERY, id=args.thread)["node"] or {}
+    first = ((node.get("comments") or {}).get("nodes") or [None])[0]
+    emit({**thread, "comment": minimize(first["id"], args.reason) if first else None})
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -274,6 +334,16 @@ def build_parser():
     p = sub.add_parser("resolve", help="Resolve a review thread")
     p.add_argument("thread", help="Thread node id (PRRT_…) from `state`")
     p.set_defaults(fn=cmd_resolve)
+
+    p = sub.add_parser("close", help="Resolve a review thread and hide it (minimize its first comment)")
+    p.add_argument("thread", help="Thread node id (PRRT_…) from `state`")
+    p.add_argument("--reason", choices=HIDE_REASONS, default="RESOLVED")
+    p.set_defaults(fn=cmd_close)
+
+    p = sub.add_parser("hide", help="Hide (minimize) a comment or review body")
+    p.add_argument("subject", help="Node id from `state`: IC_… (top-level), PRRC_… (inline) or PRR_… (review body)")
+    p.add_argument("--reason", choices=HIDE_REASONS, default="RESOLVED")
+    p.set_defaults(fn=cmd_hide)
     return parser
 
 
