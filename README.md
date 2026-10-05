@@ -9,8 +9,9 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 - **[jira](jira/)** — write Jira managers and engineers can both read: issues with a business-value summary and the
   business problem before the technical details, and reports posted as comments with a verdict panel, the facts
   behind it and the actions. ADF via REST.
-- **[pr](pr/)** — shepherd an open pull request to green: fix failing GitHub Actions at the root cause, work through
-  every review, and hand architectural and trade-off calls back to you as weighed options.
+- **[pr](pr/)** — shepherd an open pull request to merge: fix failing GitHub Actions at the root cause, work through
+  every review, rebase when the base runs ahead, and hand architectural and trade-off calls back to you as weighed
+  options.
 
 ## Install
 

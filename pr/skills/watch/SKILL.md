@@ -1,25 +1,28 @@
 ---
 name: watch
 description: >
-  Shepherd an open pull request to green: wait for its GitHub Actions / checks, fix whatever fails at the root cause,
-  then work through every review (human and bot): fix what is clearly fixable, reply where the reviewer is wrong,
-  and hand the architectural and trade-off calls back to the user as weighed options with a recommendation. Commits
-  and pushes the fixes to the PR branch, resolves and hides the bot comments it addressed, and repeats until checks
-  pass and no actionable review is left. Use right after a PR is opened or pushed, and whenever the user asks to
-  watch / babysit / shepherd a PR, to get CI green, to fix failing checks or actions, to address / handle / work
-  through review comments, to resolve or close addressed comments, or to "take care of the PR".
+  Shepherd an open pull request to merge: wait for its GitHub Actions / checks, fix whatever fails at the root cause,
+  then work through every review (human and bot): fix what is clearly fixable, reply where the reviewer is wrong, and
+  hand the architectural and trade-off calls back to the user as weighed options with a recommendation. Commits and
+  pushes the fixes to the PR branch, resolves and hides the bot comments it addressed, rebases onto the base branch
+  when the PR falls behind or into conflict, and keeps watching until the PR is merged. Use right after a PR is opened
+  or pushed, and whenever the user asks to watch / babysit / shepherd a PR, to get CI green, to fix failing checks or
+  actions, to address / handle / work through review comments, to resolve or close addressed comments, or to "take
+  care of the PR".
 ---
 
 # Watch a pull request
 
-Takes a PR from "opened" to "green, every review answered". Two duties, in a loop:
+Takes a PR from "opened" to "merged". Three duties, in a loop:
 
 1. **Checks.** Wait for every check on the head commit. A failure is fixed at its root cause, verified locally and
    pushed.
 2. **Reviews.** Every unresolved thread, review body and top-level comment is read against the current code, then
    fixed, answered or escalated to the user — and once addressed, closed so the PR shows only what is still open.
+3. **Base.** When the base branch moves on and the PR falls behind or into conflict, rebase onto it.
 
-The loop stops when the checks pass, no actionable feedback is left, and only the user's decisions remain.
+Green with every review answered is not the end: it is waiting. A new review, a rerun or a moved base can turn it red
+again at any time, so the watch runs until the PR is merged or closed, or the user says to stop.
 
 The bundled script gathers the PR state in one call and answers review threads:
 
@@ -31,10 +34,12 @@ It needs an authenticated `gh` (`gh auth status`). With no PR argument it uses t
 
 ## Authority
 
-Invoking this skill authorizes **new commits pushed to the PR's head branch**, replies on the PR, and resolving and
-hiding **bot** comments once they are addressed. Nothing else:
+Invoking this skill authorizes **new commits pushed to the PR's head branch**, **rebasing that branch onto its base**
+when the PR is behind or conflicting (pushed with `--force-with-lease`), replies on the PR, and resolving and hiding
+**bot** comments once they are addressed. Nothing else:
 
-- Never force-push, amend, rebase or squash pushed commits, and never push to the base branch or another branch.
+- Never force-push except the lease-protected push of such a rebase; never amend, squash or otherwise rewrite pushed
+  commits, and never push to the base branch or another branch.
 - Never merge, close, mark ready / draft, request or dismiss reviews, or edit the PR title and description.
 - Never weaken a gate to get green: no skipped or deleted tests, no `continue-on-error`, no `--no-verify`, no lowered
   coverage or lint thresholds, no `# noqa` / `@ts-ignore` / `eslint-disable` to silence a real finding, no retrying a
@@ -124,13 +129,32 @@ Usually two or three options, "keep as is" among them whenever it is defensible,
 5. **Give up after three attempts** at the same check and hand it to the user with what was tried and what the logs
    say.
 
+## Keep up with the base
+
+Rebase when `wait` reports `behind` or `conflicts`, or `state` shows `mergeStateStatus` `BEHIND` (the base moved and
+branch protection wants the PR up to date) or `DIRTY` (it no longer merges cleanly):
+
+1. With a clean working tree on the head branch: `git fetch origin <base>` and `git rebase origin/<base>`.
+2. **Conflicts.** Resolve one when the intent of both sides is clear and can be kept — imports, neighbouring edits, a
+   symbol renamed on the base that the PR uses. When resolving means choosing between the PR's behavior and what
+   landed on the base, `git rebase --abort` and bring it to the user as a Decide.
+3. **Verify** with the build and the tests the PR touches before pushing. A break the rebase surfaced is fixed like a
+   failing check, in a new commit on top.
+4. `git push --force-with-lease`. A rejected lease means someone else pushed meanwhile: fetch, start over from their
+   head, and never fall back to a plain `--force`.
+
+A base that moved without making the PR behind or conflicting is not a reason to rebase: it restarts CI and resets the
+reviewers' "viewed" files for nothing.
+
 ## Procedure
 
 1. **Locate the PR and sync.** `gh_pr.py state [<pr>]`. Check out the head branch (`gh pr checkout <n>`) and pull. If
    the working tree is dirty, stop and ask — never stash or discard the user's changes. If the PR is from a fork you
    cannot push to, or is merged / closed, report and stop.
-2. **Wait for the checks** when any are pending: run `gh pr checks <n> --watch --interval 30` in the background and
-   continue when it exits — meanwhile, triage the reviews that are already there.
+2. **Wait for the checks** when any are pending: start `gh_pr.py wait <n>` in the background (Bash
+   `run_in_background`) — it exits with `checks-done` when they finish — and meanwhile triage the reviews that are
+   already there. If the PR is already `BEHIND` or `DIRTY`, rebase first (see above): checks on a stale base are
+   wasted.
 3. **Fix failing checks** as above.
 4. **Work the reviews.** From `state`: every `unresolvedThreads` entry, every `reviews` body (`CHANGES_REQUESTED`
    first), and every top-level `comments` entry not written by `viewer`. Triage each, apply all the Fix items — test
@@ -144,16 +168,27 @@ Usually two or three options, "keep as is" among them whenever it is defensible,
       them all, not one comment each.
     - Decide items get no reply until the user has chosen.
     - Then close what was addressed (see below).
-7. **Loop.** A push starts new checks and often a new bot review: back to step 2. Stop when the checks are green and
-   nothing actionable is left, or when everything left is waiting on the user.
-8. **Ask the decisions** (see above), implement the answers, and go back to step 5.
-9. **Report** in chat:
+7. **Report** in chat at the end of each pass:
     - checks: passing / failing, with anything rerun as flaky or blocked outside the PR;
-    - what was fixed, each with its commit sha, and the threads answered, resolved or hidden — naming which of the two;
+    - what was fixed, each with its commit sha, and the threads answered, resolved or hidden — saying which;
+    - rebases, with the base sha they moved onto;
     - decisions still open, and reviewers who have not reviewed yet (`pendingReviewers`).
+8. **Keep watching until the PR is merged.** While the PR is open, never end a turn without a `gh_pr.py wait <n>`
+   running in the background — after a push, after green, and while decisions wait on the user (start it before
+   asking). It polls every minute and wakes you with what happened:
 
-Reviews that arrive later are not seen by one run. To keep watching, run it on an interval — `/loop 15m /pr:watch
-<n>` — and the next tick picks up whatever came in.
+   | Event                  | Do                                                                              |
+   |------------------------|---------------------------------------------------------------------------------|
+   | `checks-done`          | Step 3 for whatever failed; when all passed, wait again                         |
+   | `review`               | Step 4 on the items in `newActivity` (new, or edited by a bot)                  |
+   | `behind` / `conflicts` | Rebase (see Keep up with the base), then step 2                                 |
+   | `head-moved`           | Someone else pushed: `git pull --ff-only`, re-read the diff, then step 2        |
+   | `timeout`              | Nothing happened for an hour: `state` once to be sure, then wait again          |
+   | `merged` / `closed`    | Final report and stop — the only way the watch ends, besides the user saying so |
+
+   A check handed to the user after three attempts, or a decision still open, does not stop the watch: a new review
+   or a moved base still needs you.
+9. **Ask the decisions** (see above), implement the answers, and go back to step 5.
 
 ## Close what was addressed
 
@@ -185,23 +220,32 @@ nothing that was closed is left in `unresolvedThreads`, `comments` or the visibl
 
 ## Script commands
 
-| Command                              | Returns (JSON)                                                      |
-|--------------------------------------|---------------------------------------------------------------------|
-| `state [<pr>] [--repo OWNER/REPO]`   | `viewer`, `pr`, `checks`, threads, `reviews`, `comments` (below)    |
-| `logs [<pr>] [--repo …] [--lines N]` | Each failed check with its failed-step log tail (150, `0` = all)    |
-| `reply <threadId> <body\|->`         | The new comment's `id` and `url`                                    |
-| `resolve <threadId>`                 | The thread's `id` and `isResolved`                                  |
-| `close <threadId> [--reason R]`      | The thread resolved and its first comment hidden (R: `RESOLVED`)    |
-| `hide <id> [--reason R]`             | The comment or review body hidden; a hidden one gets the new reason |
+| Command                                | Returns (JSON)                                                      |
+|----------------------------------------|---------------------------------------------------------------------|
+| `state [<pr>] [--repo OWNER/REPO]`     | `viewer`, `pr`, `checks`, threads, `reviews`, `comments` (below)    |
+| `logs [<pr>] [--repo …] [--lines N]`   | Each failed check with its failed-step log tail (150, `0` = all)    |
+| `reply <threadId> <body\|->`           | The new comment's `id` and `url`                                    |
+| `resolve <threadId>`                   | The thread's `id` and `isResolved`                                  |
+| `close <threadId> [--reason R]`        | The thread resolved and its first comment hidden (R: `RESOLVED`)    |
+| `hide <id> [--reason R]`               | The comment or review body hidden; a hidden one gets the new reason |
+| `wait [<pr>] [--repo …] [--timeout S]` | `events`, `pr`, check counts and `newActivity` (below)              |
 
 `pr` holds the head branch and sha, base, review decision and `pendingReviewers`; each check carries an `outcome`
 of `pending`, `passed` or `failed`. Threads come as `unresolvedThreads` and `resolvedVisibleThreads` (resolved bot
 threads still on screen). Comments and reviews carry `isBot` and `isMinimized`; hidden top-level comments and
 hidden review bodies are left out. `<pr>` is a number, a URL or a branch. All ids come from `state`.
 
+`wait` polls `state` every `--interval` seconds (60) and exits on the first change that needs the watcher: `merged`,
+`closed`, `head-moved`, `checks-done` (pending checks all finished), `behind`, `conflicts` (the merge state turned
+`BEHIND` or `DIRTY`), `review` (a thread comment, review or top-level comment by anyone but `viewer` is new or edited),
+or `timeout` after `--timeout` seconds (3600, `0` = never). Several events can come at once. Transient `gh` errors are
+retried; it fails only after five in a row.
+
 ## Guardrails
 
-- Push only new commits to the PR's head branch; never rewrite history, merge, or touch another branch.
+- Push only new commits to the PR's head branch; the one exception is a rebase onto the base when the PR is behind or
+  conflicting, pushed with `--force-with-lease`. Never rewrite history otherwise, merge, or touch another branch.
+- Never stop watching an open PR on your own: keep a `wait` running until it is merged or closed.
 - Never make CI green by weakening it, and never retry a real failure into passing.
 - Never decide an architectural or trade-off question on the user's behalf; never reply to a Decide item before the
   user has chosen.

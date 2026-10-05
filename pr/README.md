@@ -1,11 +1,13 @@
 # pr
 
-A Claude Code plugin that shepherds an open pull request to green: it waits for the checks, fixes whatever fails,
-works through every review, and hands the calls that are yours to make back to you as weighed options.
+A Claude Code plugin that shepherds an open pull request to merge: it waits for the checks, fixes whatever fails,
+works through every review, rebases when the base runs ahead, and hands the calls that are yours to make back to you
+as weighed options.
 
 ## What it gives you
 
-- A `pr:watch` skill that runs a loop over the PR until checks pass and no actionable review is left.
+- A `pr:watch` skill that watches the PR until it is merged: after every push until the checks are green, and after
+  green for new reviews, reruns and a base branch that moved on.
 - **Failing checks fixed at the root cause**: reads the failed-step logs, reproduces the CI command locally, fixes,
   verifies and pushes. Flaky failures get one rerun; failures outside the PR (red base branch, missing secret) are
   reported, not worked around.
@@ -17,10 +19,14 @@ works through every review, and hands the calls that are yours to make back to y
 - **Addressed comments closed properly**: after the push, bot threads are resolved *and* hidden, bot findings posted
   as top-level comments and bot review bodies are hidden as Resolved (they have no resolve), and a second `state`
   confirms nothing addressed is left on screen. People's threads get a reply and stay theirs to resolve.
+- **Rebased when the base runs ahead**: when the PR turns behind or conflicting, it is rebased onto the base, clear
+  conflicts are resolved, the tests are rerun, and the result is pushed with `--force-with-lease`. A conflict that
+  means choosing between the PR and what landed on the base comes back to you instead.
 - **Decisions as briefs**: the reviewer's point, two or three options with benefit, cost and effort, "keep as is"
   when defensible, and one recommendation — then a question you answer in one click.
-- **Guardrails**: new commits on the PR branch only — no force-push, no merge, no history rewrite — and CI is never
-  made green by weakening it (no skipped tests, `continue-on-error`, `--no-verify` or lowered thresholds).
+- **Guardrails**: new commits on the PR branch only — no merge, no history rewrite beyond the lease-protected rebase
+  onto the base — and CI is never made green by weakening it (no skipped tests, `continue-on-error`, `--no-verify` or
+  lowered thresholds).
 - A dependency-free Python script on top of `gh` that returns the whole PR state as one JSON document, replies to
   and resolves review threads, and hides comments and review bodies.
 
@@ -48,8 +54,9 @@ Run `/pr:watch` (the current branch's PR) or `/pr:watch 412`, or ask in plain la
 - "CI is red on #412, fix it"
 - "address the review comments"
 
-One run ends when the checks are green and everything left is waiting on you. Reviews that arrive later are picked
-up by running it on an interval: `/loop 15m /pr:watch 412`.
+The watch does not end on green: between passes a background `wait` polls the PR every minute and wakes the agent
+when checks finish, a review comes in, someone else pushes, or the PR falls behind its base. It ends when the PR is
+merged or closed, or when you tell it to stop.
 
 ## Script commands
 
@@ -65,3 +72,4 @@ All commands print JSON. `<pr>` is a number, a URL or a branch; without it, the 
 | `resolve <threadId>`                 | Resolve a review thread                                                      |
 | `close <threadId> [--reason R]`      | Resolve a review thread and hide it (`RESOLVED` by default)                  |
 | `hide <id> [--reason R]`             | Hide a comment or review body, or change the reason of a hidden one          |
+| `wait [<pr>] [--repo …]`             | Poll until checks finish, a review lands, the base runs ahead, or it merges  |

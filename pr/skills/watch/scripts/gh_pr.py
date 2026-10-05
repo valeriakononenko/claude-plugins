@@ -4,8 +4,9 @@
 One `state` call returns everything the watch loop needs in a single JSON document: the PR head, every check on the
 head commit with its outcome, the unresolved review threads, the latest review per reviewer, the top-level comments
 and the reviewers still pending. `logs` prints the failing part of each failed GitHub Actions job, `reply` answers a
-review thread, `resolve` resolves one, `close` resolves it and hides its comments, and `hide` minimizes any comment or
-review body.
+review thread, `resolve` resolves one, `close` resolves it and hides its comments, `hide` minimizes any comment or
+review body, and `wait` polls the PR until something needs the watcher: checks finished, new review activity, the
+branch fell behind its base or into conflict, someone else pushed, or the PR was merged or closed.
 
 Requires an authenticated gh (`gh auth status`). Every command prints JSON to stdout.
 """
@@ -13,6 +14,7 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 
 sys.dont_write_bytecode = True
 
@@ -20,6 +22,8 @@ HIDE_REASONS = ("RESOLVED", "OUTDATED", "DUPLICATE", "OFF_TOPIC")
 FAILED_CONCLUSIONS = {"FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED", "ERROR"}
 PASSED_CONCLUSIONS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 PENDING_STATES = {"QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED", "EXPECTED"}
+BASE_EVENTS = {"BEHIND": "behind", "DIRTY": "conflicts"}
+WAIT_RETRIES = 5
 
 STATE_QUERY = """
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -27,7 +31,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       number url title state isDraft author { login }
-      headRefName headRefOid baseRefName mergeable mergeStateStatus reviewDecision
+      headRefName headRefOid baseRefName baseRefOid mergeable mergeStateStatus reviewDecision
       headRepository { nameWithOwner }
       reviewRequests(first: 20) {
         nodes { requestedReviewer { ... on User { login } ... on Team { slug } ... on Bot { login } } }
@@ -236,6 +240,7 @@ def collect_state(owner, name, number):
             "headRepo": (pr["headRepository"] or {}).get("nameWithOwner"),
             "headSha": pr["headRefOid"],
             "base": pr["baseRefName"],
+            "baseSha": pr["baseRefOid"],
             "mergeable": pr["mergeable"],
             "mergeStateStatus": pr["mergeStateStatus"],
             "reviewDecision": pr["reviewDecision"],
@@ -311,6 +316,68 @@ def cmd_close(args):
     emit({**thread, "comment": minimize(first["id"], args.reason) if first else None})
 
 
+def activity(state):
+    """Everything others wrote on the PR, as node id → body, so both new and edited items show up."""
+    items = [c for t in state["unresolvedThreads"] for c in t["comments"]] + state["reviews"] + state["comments"]
+    return {i["id"]: i["body"] for i in items if i["author"] != state["viewer"]}
+
+
+def wait_events(before, now):
+    pr = now["pr"]
+    if pr["state"] != "OPEN":
+        return [pr["state"].lower()]
+    events = []
+    if pr["headSha"] != before["pr"]["headSha"]:
+        events.append("head-moved")
+    elif before["checks"]["pending"] and not now["checks"]["pending"]:
+        events.append("checks-done")
+    status = pr["mergeStateStatus"]
+    if status in BASE_EVENTS and status != before["pr"]["mergeStateStatus"]:
+        events.append(BASE_EVENTS[status])
+    if activity(now).items() - activity(before).items():
+        events.append("review")
+    return events
+
+
+def wait_summary(events, before, now):
+    seen = activity(before)
+    return {
+        "events": events,
+        "pr": now["pr"],
+        "checks": {k: now["checks"][k] for k in ("rollup", "pending", "failed", "passed")},
+        "newActivity": [i for i, body in activity(now).items() if seen.get(i) != body],
+    }
+
+
+def poll(owner, name, number):
+    for attempt in range(WAIT_RETRIES):
+        try:
+            return collect_state(owner, name, number)
+        except GhError:
+            if attempt == WAIT_RETRIES - 1:
+                raise
+            time.sleep(30)
+
+
+def cmd_wait(args):
+    target = resolve_pr(args.pr, args.repo)
+    before = poll(*target)
+    deadline = time.monotonic() + args.timeout if args.timeout else None
+    while True:
+        if deadline and time.monotonic() >= deadline:
+            emit(wait_summary(["timeout"], before, before))
+            return
+        time.sleep(args.interval)
+        now = poll(*target)
+        events = wait_events(before, now)
+        if events:
+            emit(wait_summary(events, before, now))
+            return
+        if now["pr"]["mergeStateStatus"] == "UNKNOWN":
+            now["pr"]["mergeStateStatus"] = before["pr"]["mergeStateStatus"]
+        before = now
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -325,6 +392,13 @@ def build_parser():
         if command == "logs":
             p.add_argument("--lines", type=int, default=150, help="Keep the last N lines per job (0 = all)")
         p.set_defaults(fn=fn)
+
+    p = sub.add_parser("wait", help="Poll the PR until something needs the watcher, then print what happened")
+    p.add_argument("pr", nargs="?", help="PR number, URL or branch (default: the current branch's PR)")
+    p.add_argument("--repo", help="OWNER/REPO when not run inside the repository")
+    p.add_argument("--interval", type=int, default=60, help="Seconds between polls")
+    p.add_argument("--timeout", type=int, default=3600, help="Stop with a `timeout` event after N seconds (0 = never)")
+    p.set_defaults(fn=cmd_wait)
 
     p = sub.add_parser("reply", help="Reply inside a review thread")
     p.add_argument("thread", help="Thread node id (PRRT_…) from `state`")
