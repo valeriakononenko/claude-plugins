@@ -1,0 +1,15 @@
+{
+  "name": "pr",
+  "version": "0.1.0",
+  "description": "Shepherd an open pull request to green: fix failing GitHub Actions at the root cause, work through every review, and hand architectural and trade-off calls back to you as weighed options.",
+  "author": {
+    "name": "Valeria Kononenko"
+  },
+  "keywords": [
+    "github",
+    "pull-request",
+    "ci",
+    "github-actions",
+    "code-review"
+  ]
+}

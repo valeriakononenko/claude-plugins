@@ -9,6 +9,8 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 - **[jira](jira/)** — write Jira managers and engineers can both read: issues with a business-value summary and the
   business problem before the technical details, and reports posted as comments with a verdict panel, the facts
   behind it and the actions. ADF via REST.
+- **[pr](pr/)** — shepherd an open pull request to green: fix failing GitHub Actions at the root cause, work through
+  every review, and hand architectural and trade-off calls back to you as weighed options.
 
 ## Install
 
@@ -16,4 +18,5 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 /plugin marketplace add valeriakononenko/claude-plugins
 /plugin install docs@divergence082-plugins
 /plugin install jira@divergence082-plugins
+/plugin install pr@divergence082-plugins
 ```
