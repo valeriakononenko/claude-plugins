@@ -1,7 +1,7 @@
 {
   "name": "pr",
   "version": "0.3.0",
-  "description": "Shepherd an open pull request to merge: fix failing GitHub Actions at the root cause, work through every review, rebase when the base runs ahead, and hand architectural and trade-off calls back to you as weighed options.",
+  "description": "Both sides of a pull request: shepherd yours to merge — fix failing GitHub Actions, work through every review, rebase when the base runs ahead — and review a colleague's against its Jira task, posting only the problems you pick as one GitHub review.",
   "author": {
     "name": "Valeria Kononenko"
   },
@@ -10,6 +10,7 @@
     "pull-request",
     "ci",
     "github-actions",
-    "code-review"
+    "code-review",
+    "jira"
   ]
 }
