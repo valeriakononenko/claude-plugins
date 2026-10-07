@@ -48,15 +48,15 @@ posted only after they confirm it. Never:
 `~/.claude/pr-review/<owner>/<repo>/<number>.json` remembers, across sessions, each problem the review raised: its id,
 title, location, status and thread. Statuses:
 
-| Status      | Meaning                                                                  |
-|-------------|--------------------------------------------------------------------------|
-| `proposed`  | In the preview, not decided yet                                          |
-| `posted`    | Published; `threadId` points at its thread (`inline: false` = in body)   |
-| `dismissed` | The user rejected it — **never raise it again on this PR**, with reason  |
-| `fixed`     | Verified fixed on a later head                                           |
-| `open`      | Verified still not fixed on a later head                                 |
-| `followup`  | Too big for this PR; suggested as a separate task                        |
-| `withdrawn` | The reviewer (we) was wrong; the author's answer holds                   |
+| Status      | Meaning                                                                 |
+|-------------|-------------------------------------------------------------------------|
+| `proposed`  | In the preview, not decided yet                                         |
+| `posted`    | Published; `threadId` points at its thread (`inline: false` = in body)  |
+| `dismissed` | The user rejected it — **never raise it again on this PR**, with reason |
+| `fixed`     | Verified fixed on a later head                                          |
+| `open`      | Verified still not fixed on a later head                                |
+| `followup`  | Too big for this PR; suggested as a separate task                       |
+| `withdrawn` | The reviewer (we) was wrong; the author's answer holds                  |
 
 `post` records what it publishes; everything else is written with `record`. Ids continue across rounds: a re-review
 numbers its new problems from `nextProblemId`, so P3 is the same problem in every round and in every chat.
@@ -70,12 +70,12 @@ problem, and then the preview says so: "previously dismissed P4, but the new com
 
 1. `gh_review.py context [<pr>]` — the PR, description, commits, files, checks, bot findings, the viewer's earlier
    reviews and threads, other reviewers' open threads, and the ledger.
-2. **Find the task.** `jiraKeys` lists the keys found, best first: the conventional branch name
-   (`feat/SHOP-123-…`), the title, commit messages (`fix(SHOP-123): …`), then the description. The user may also pass
-   the key with the PR (`/pr:review 412 SHOP-123`). Read it with `gh_review.py jira <KEY>`: description, acceptance
-   criteria, parent, subtasks, links, recent comments. A sub-task or a thin story → also read its parent. Without Jira
-   credentials, use an Atlassian connector if one is available; with no key or no access, say so and review against the
-   PR description alone. Several unrelated keys → ask which one the PR implements.
+2. **Find the task.** `jiraKeys` lists the keys found, best first: the conventional branch name (`feat/SHOP-123-…`), the
+   title, commit messages (`fix(SHOP-123): …`), then the description. The user may also pass the key with the PR
+   (`/pr:review 412 SHOP-123`). Read it with `gh_review.py jira <KEY>`: description, acceptance criteria, parent,
+   subtasks, links, recent comments. A sub-task or a thin story → also read its parent. Without Jira credentials, use
+   an Atlassian connector if one is available; with no key or no access, say so and review against the PR description
+   alone. Several unrelated keys → ask which one the PR implements.
 3. **Write down the task model** before reading the diff, in a few lines: what must change, the acceptance criteria,
    what must explicitly stay as it was, and what is out of scope. It is the yardstick for everything below and opens
    the preview.
@@ -92,9 +92,9 @@ A human review on top of red CI or ignored bot findings is wasted. From `context
 - **CI** — `checks.failed > 0`. While checks are `pending`, start `gh pr checks <n> --watch` in the background and do
   the analysis meanwhile; decide the gate when they finish.
 - **Bot findings** — each `botFindings` entry is one of:
-  - *open* — an unresolved thread, or a visible top-level comment / review body with findings no one answered;
-  - *answered* — fixed (check the code at that place on the head) or rejected with a reason in a reply;
-  - *dismissed without reason* — resolved or hidden, but the code did not change and no reply explains why.
+    - *open* — an unresolved thread, or a visible top-level comment / review body with findings no one answered;
+    - *answered* — fixed (check the code at that place on the head) or rejected with a reason in a reply;
+    - *dismissed without reason* — resolved or hidden, but the code did not change and no reply explains why.
 
   Open and silently dismissed findings that are real block; a bot's summary, a "reviewing…" placeholder, praise or a
   finding that is plainly a false positive does not — say which ones you skipped and why.
@@ -266,11 +266,11 @@ rebuild it from `viewerThreads` — each thread you opened is a problem, numbere
 2. **What changed since:** `git diff <lastReviewedSha> <headSha>` when the old head is an ancestor; after a rebase or
    force-push, `git range-diff <base>...<lastReviewedSha> <base>...<headSha>` and the full diff.
 3. **Every earlier problem** in `posted` or `open`, read against the new code and the author's replies in its thread:
-   - **fixed** — the scenario no longer happens (and a test covers it when one was asked for);
-   - **open** — not fixed, or fixed partly; say precisely what is still wrong;
-   - **followup** — the author argues, or it is clear, that the fix is large or beyond the task: recommend a separate
-     task (offer to file it with the `jira` plugin) instead of blocking this PR;
-   - **withdrawn** — the author's answer is right.
+    - **fixed** — the scenario no longer happens (and a test covers it when one was asked for);
+    - **open** — not fixed, or fixed partly; say precisely what is still wrong;
+    - **followup** — the author argues, or it is clear, that the fix is large or beyond the task: recommend a separate
+      task (offer to file it with the `jira` plugin) instead of blocking this PR;
+    - **withdrawn** — the author's answer is right.
 4. **Regressions in the new commits** — section 3 on the diff since the last review: fixes often break what was
    working. New problems get new ids.
 5. **Preview** the round: a summary of what the new commits changed and how (the first round's Summary, for this
@@ -293,16 +293,16 @@ rebuild it from `viewerThreads` — each thread you opened is a problem, numbere
 
 ## Script commands
 
-| Command                                         | Returns (JSON)                                                    |
-|-------------------------------------------------|-------------------------------------------------------------------|
-| `context [<pr>] [--repo OWNER/REPO]`            | PR, `jiraKeys`, commits, files, checks, `botFindings`, earlier    |
-|                                                 | reviews and threads, `otherOpenThreads`, ledger, `nextProblemId`  |
-| `jira <KEY> [--comments N]`                     | Summary, type, status, description, acceptance criteria, parent,  |
-|                                                 | subtasks, links, newest comments                                  |
-| `post <spec\|-> [--pr …] [--dry-run]`           | The submitted review, threads and replies with their urls         |
-| `post … --approved-by-user`                     | Required with `"event": "APPROVE"`                                |
-| `ledger [<pr>]`                                 | The ledger, its path and `nextProblemId`                          |
-| `record <update\|-> [--pr …]`                   | The ledger after merging `{"task": …, "problems": [{id, …}]}`     |
+| Command                               | Returns (JSON)                                                   |
+|---------------------------------------|------------------------------------------------------------------|
+| `context [<pr>] [--repo OWNER/REPO]`  | PR, `jiraKeys`, commits, files, checks, `botFindings`, earlier   |
+|                                       | reviews and threads, `otherOpenThreads`, ledger, `nextProblemId` |
+| `jira <KEY> [--comments N]`           | Summary, type, status, description, acceptance criteria, parent, |
+|                                       | subtasks, links, newest comments                                 |
+| `post <spec\|-> [--pr …] [--dry-run]` | The submitted review, threads and replies with their urls        |
+| `post … --approved-by-user`           | Required with `"event": "APPROVE"`                               |
+| `ledger [<pr>]`                       | The ledger, its path and `nextProblemId`                         |
+| `record <update\|-> [--pr …]`         | The ledger after merging `{"task": …, "problems": [{id, …}]}`    |
 
 `<pr>` is a number, a URL or a branch; without it, the current branch's PR. `botFindings` entries carry `kind`
 (`thread`, `comment`, `review`), `status` (`open`, `resolved`, `hidden`) and the human `replies` of a thread.

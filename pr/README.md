@@ -114,10 +114,10 @@ All commands print JSON. `<pr>` is a number, a URL or a branch; without it, the 
 
 ### `review/scripts/gh_review.py`
 
-| Command                                   | What it does                                                            |
-|-------------------------------------------|-------------------------------------------------------------------------|
-| `context [<pr>] [--repo OWNER/REPO]`      | PR, Jira keys, commits, files, checks, bot findings, earlier reviews    |
-| `jira <KEY>`                              | The Jira task: description, acceptance criteria, parent, links          |
-| `post <spec\|-> [--pr …] [--dry-run]`     | Publish one review: body, inline threads, replies; `--approved-by-user` |
-| `ledger [<pr>]`                           | The PR's review ledger: posted, fixed and dismissed problems            |
-| `record <update\|-> [--pr …]`             | Merge problem statuses and the task key into the ledger                 |
+| Command                               | What it does                                                            |
+|---------------------------------------|-------------------------------------------------------------------------|
+| `context [<pr>] [--repo OWNER/REPO]`  | PR, Jira keys, commits, files, checks, bot findings, earlier reviews    |
+| `jira <KEY>`                          | The Jira task: description, acceptance criteria, parent, links          |
+| `post <spec\|-> [--pr …] [--dry-run]` | Publish one review: body, inline threads, replies; `--approved-by-user` |
+| `ledger [<pr>]`                       | The PR's review ledger: posted, fixed and dismissed problems            |
+| `record <update\|-> [--pr …]`         | Merge problem statuses and the task key into the ledger                 |
