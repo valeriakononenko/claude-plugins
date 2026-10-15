@@ -6,7 +6,8 @@ Jira keys found in the branch, title, commits and description, the checks, every
 answered, the viewer's earlier reviews and threads, and the review ledger. `jira` reads the task behind a key.
 `post` publishes one review — a body, new inline threads and replies in earlier threads — atomically, as a pending
 review that is submitted at the end or deleted on failure. `ledger` and `record` keep the per-PR ledger of problems
-(posted, fixed, dismissed…) that makes a re-review pick up where the last one stopped.
+(posted, fixed, dismissed…) that makes a re-review pick up where the last one stopped. `wait` polls the PR until the
+author requests the viewer's review again, or the PR is merged or closed.
 
 Requires an authenticated gh (`gh auth status`); `jira` reads JIRA_ORG, JIRA_EMAIL and JIRA_TOKEN from the
 environment, ./.env or ~/.jira.env. Every command prints JSON to stdout.
@@ -18,6 +19,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,6 +38,7 @@ JIRA_REQUIRED = ("JIRA_ORG", "JIRA_EMAIL", "JIRA_TOKEN")
 JIRA_DOTENV = (".env", os.path.expanduser("~/.jira.env"))
 CRITERIA_FIELD_RE = re.compile(r"acceptance|criteria|definition of done|criterios|aceptaci", re.I)
 BOT_BODY_LIMIT = 4000
+WAIT_RETRIES = 5
 LEDGER_HOME = Path(os.environ.get("PR_REVIEW_HOME") or os.path.expanduser("~/.claude/pr-review"))
 
 CONTEXT_QUERY = """
@@ -112,6 +115,22 @@ mutation($review: ID!, $event: PullRequestReviewEvent!, $body: String) {
 
 DELETE_REVIEW = """
 mutation($review: ID!) { deletePullRequestReview(input: {pullRequestReviewId: $review}) { pullRequestReview { id } } }
+"""
+
+WAIT_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!) {
+  viewer { login }
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      number url state isDraft headRefOid
+      reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }
+      timelineItems(last: 20, itemTypes: [REVIEW_REQUESTED_EVENT]) { nodes {
+        ... on ReviewRequestedEvent { createdAt requestedReviewer { ... on User { login } } }
+      } }
+      reviews(last: 50) { nodes { author { login } state submittedAt } }
+    }
+  }
+}
 """
 
 RESOLVE_THREAD = """
@@ -393,7 +412,7 @@ def validate_spec(spec, args, viewer, author, head):
     if spec.get("commit") != head:
         raise GhError(f"the PR head moved to {head}; the review was built on {spec.get('commit')}. Re-check first.")
     if event == "APPROVE" and not args.approved_by_user:
-        raise GhError("APPROVE needs --approved-by-user: approve only after the user confirmed it for this head")
+        raise GhError("APPROVE needs --approved-by-user: approve only a clean round or after the user confirmed it")
     if event != "COMMENT" and viewer == author:
         raise GhError(f"{viewer} authored this PR; GitHub only allows COMMENT on your own PR")
     if event != "APPROVE" and not (spec.get("body") or spec.get("comments") or spec.get("replies")):
@@ -490,6 +509,60 @@ def cmd_record(args):
         entry.update(problem)
     path = save_ledger(owner, name, number, ledger)
     emit({"path": str(path), "nextProblemId": next_problem_id(ledger), **ledger})
+
+
+def review_request_state(owner, name, number):
+    data = graphql(WAIT_QUERY, owner=owner, repo=name, number=number)
+    viewer = data["viewer"]["login"]
+    pr = data["repository"]["pullRequest"]
+    requested = any(login(n["requestedReviewer"]) == viewer for n in pr["reviewRequests"]["nodes"]
+                    if n["requestedReviewer"])
+    requests = [n["createdAt"] for n in pr["timelineItems"]["nodes"]
+                if n and n.get("requestedReviewer") and login(n["requestedReviewer"]) == viewer]
+    reviews = [r["submittedAt"] for r in pr["reviews"]["nodes"]
+               if login(r["author"]) == viewer and r["state"] != "PENDING" and r["submittedAt"]]
+    return {
+        "pr": {"repo": f"{owner}/{name}", "number": pr["number"], "url": pr["url"], "state": pr["state"],
+               "isDraft": pr["isDraft"], "headSha": pr["headRefOid"]},
+        "viewer": viewer,
+        "requested": requested,
+        "requestedAt": max(requests, default=None),
+        "lastReviewedAt": max(reviews, default=None),
+    }
+
+
+def wait_events(state):
+    if state["pr"]["state"] != "OPEN":
+        return [state["pr"]["state"].lower()]
+    if state["requested"] and state["requestedAt"] and state["lastReviewedAt"] \
+            and state["requestedAt"] > state["lastReviewedAt"]:
+        return ["review-requested"]
+    return []
+
+
+def poll(owner, name, number):
+    for attempt in range(WAIT_RETRIES):
+        try:
+            return review_request_state(owner, name, number)
+        except GhError:
+            if attempt == WAIT_RETRIES - 1:
+                raise
+            time.sleep(30)
+
+
+def cmd_wait(args):
+    target = resolve_pr(args.pr, args.repo)
+    deadline = time.monotonic() + args.timeout if args.timeout else None
+    while True:
+        state = poll(*target)
+        events = wait_events(state)
+        if events:
+            emit({"events": events, **state})
+            return
+        if deadline and time.monotonic() >= deadline:
+            emit({"events": ["timeout"], **state})
+            return
+        time.sleep(args.interval)
 
 
 def jira_credentials():
@@ -629,7 +702,8 @@ def build_parser():
     p = sub.add_parser("post", help="Publish one review: body, new inline threads and replies, then the event")
     p.add_argument("spec", help="Path to the review spec JSON, or - for stdin")
     p.add_argument("--dry-run", action="store_true", help="Validate anchors and print what would be posted")
-    p.add_argument("--approved-by-user", action="store_true", help="Required for APPROVE")
+    p.add_argument("--approved-by-user", action="store_true",
+                   help="Required for APPROVE: the round is clean, or the user confirmed the approval")
     pr_args(p)
     p.set_defaults(fn=cmd_post)
 
@@ -642,6 +716,13 @@ def build_parser():
     p.add_argument("spec", help="Path to the update JSON, or - for stdin")
     pr_args(p)
     p.set_defaults(fn=cmd_record)
+
+    p = sub.add_parser("wait", help="Poll until the viewer's review is requested again, or the PR is merged or closed")
+    p.add_argument("pr", nargs="?", help="PR number, URL or branch (default: the current branch's PR)")
+    p.add_argument("--repo", help="OWNER/REPO when not run inside the repository")
+    p.add_argument("--interval", type=int, default=60, help="Seconds between polls")
+    p.add_argument("--timeout", type=int, default=3600, help="Stop with a `timeout` event after N seconds (0 = never)")
+    p.set_defaults(fn=cmd_wait)
     return parser
 
 

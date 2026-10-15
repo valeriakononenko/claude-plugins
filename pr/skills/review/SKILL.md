@@ -6,9 +6,11 @@ description: >
   branch, test coverage and security — only what the task touches. Previews the problems numbered P1, P2… in chat,
   discusses any of them on request and proposes the wording, and after the user picks what to post publishes one
   GitHub review with inline threads. On a re-review checks every earlier problem was fixed, looks for new regressions,
-  and never raises a problem the user dismissed. Sends the author back to bot findings and red CI first. Approves only
-  when the user confirms. Use whenever the user asks to review a PR, look at / check a colleague's PR, re-review after
-  changes, or "review #412".
+  and never raises a problem the user dismissed. Sends the author back to bot findings and red CI first. Approves on
+  its own when CI is green and nothing but documentation or comment nits is left — with those nits as comments — and
+  otherwise only when the user confirms. Keeps watching the PR and re-reviews it whenever the author requests the
+  review again, until it is merged. Use whenever the user asks to review a PR, look at / check a colleague's PR,
+  re-review after changes, or "review #412".
 ---
 
 # Review a pull request
@@ -19,8 +21,10 @@ Reviews a PR as the user's assistant: the analysis is yours, every word posted o
 2. **Gate** — red CI or unanswered other/bot findings send the PR back to the author before a human review.
 3. **Analysis** — logic, regressions against the base, tests, security, scoped to the task.
 4. **Preview** — numbered problems in chat; the user asks about them, keeps some, dismisses others.
-5. **Post** — one GitHub review: a short body and a thread per problem on the code.
+5. **Post** — one GitHub review: a short body and a thread per problem on the code. A clean round is approved
+   without asking.
 6. **Re-review** — on the next round, every earlier problem is checked and new regressions are hunted.
+7. **Watch** — until the PR is merged, a re-request of the review starts the next round.
 
 The bundled script gathers the PR in one call, reads Jira, posts the review and keeps the ledger:
 
@@ -35,10 +39,11 @@ variables as the `jira` plugin: environment, `./.env` or `~/.jira.env`).
 
 Invoking this skill authorizes **reading** the PR, its repository and its Jira issue, and checking the head out into a
 temporary worktree. Every write to GitHub — a review, a reply, resolving a thread — is shown to the user first and
-posted only after they confirm it. Never:
+posted only after they confirm it. The one exception is a clean round (section 7), whose approval — with its nit
+comments and the replies closing fixed threads — is posted without asking. Never:
 
-- approve unless the user said so for **this head commit** (`post --approved-by-user`); a push after their "approve"
-  needs a new confirmation;
+- approve unless the user said so for **this head commit** (`post --approved-by-user`) or the round on this head is
+  clean; a push after their "approve" needs a new confirmation;
 - push, commit to the PR branch, merge, close, edit the PR, dismiss reviews or request reviewers;
 - resolve or hide anyone else's comments — only the threads this review opened, once their problem is fixed;
 - post a problem the user did not pick, or reword one after they approved the wording.
@@ -178,10 +183,12 @@ diff does not do, the summary says what the diff does. Keep each line short — 
 
 Severity: **blocker** (wrong result, data loss, security hole, regression), **major** (a missing acceptance criterion,
 untested behavior, a likely edge-case failure), **minor** (worth fixing, not blocking), **question** (needs the
-author's answer). Order by severity. No problems → say so, with what was checked, and offer to approve (see Post).
+author's answer), **nit** (documentation, a code comment or docstring, a typo in text — nothing that changes behavior,
+tests, types or the API). Order by severity. No problems, or only nits → the round may be clean (section 7).
 
-Then ask in plain text: which to post — `all`, a list such as `P1 P3`, or `none` — and that they can ask about any
-of them first. Record every previewed problem as `proposed` with `record`.
+Record every previewed problem as `proposed` with `record`. A clean round goes straight to posting (section 7);
+otherwise ask in plain text: which to post — `all`, a list such as `P1 P3`, or `none` — and that they can ask about
+any of them first.
 
 ## 5. Discussion
 
@@ -227,11 +234,26 @@ it). Write the body and comments in the language the PR is written in.
 
 ## 7. Post
 
-Show the final review — event, body and each comment with its anchor — then ask with `AskUserQuestion`:
+**A clean round is approved without asking.** It is clean when all of these hold on the current head:
+
+- the gate passes: every check finished and none failed, no blocking bot findings — while checks are `pending`, wait
+  for them (`gh pr checks <n> --watch`) and decide then;
+- every earlier problem other than a nit is `fixed`, `withdrawn`, `followup` or `dismissed` — none `posted` or `open`;
+- this round found no new problems, or only **nits**;
+- the PR is neither a draft nor the user's own (GitHub refuses APPROVE there).
+
+Then show the preview and post right away: `"event": "APPROVE"` with `--approved-by-user`, each nit as an inline
+thread written as in section 6 (a ```` ```suggestion ```` when the fix is a one-liner), on a re-review the "Fixed in
+`<sha>`, thanks" replies resolving the fixed threads, and a short body — the task, the tally and the verdict
+("Looks good — approving; a few small notes on the docs."). Report the review link. A dismissed nit stays dismissed,
+and when `post` refuses because the head moved, review the new commits first. Anything short of a clean round goes
+through the choice below.
+
+Otherwise show the final review — event, body and each comment with its anchor — then ask with `AskUserQuestion`:
 
 - **Request changes** (recommended when a blocker or major is in it);
 - **Comment** (only minors and questions, or the user's own PR — GitHub allows nothing else there);
-- **Approve** — only when nothing blocking is left, and choosing it is the user's confirmation for this head;
+- **Approve** — when only minors or questions are left, and choosing it is the user's confirmation for this head;
 - **Don't post**.
 
 Write the spec and post it in one call; `--dry-run` first shows what lands inline and what moves to the body:
@@ -278,12 +300,31 @@ rebuild it from `viewerThreads` — each thread you opened is a problem, numbere
    problems. The same choosing, discussion and dismissal rules apply.
 6. **Post** one review: a reply in each earlier thread (`replies`) — fixed ones resolved with `"resolve": true` and a
    one-line "Fixed in `<sha>`, thanks", open ones saying what is still missing — new threads for the new problems, and
-   a body with the round's tally. Approve only on the user's word, as always.
+   a body with the round's tally. A clean round is approved without asking (section 7); otherwise approve only on the
+   user's word.
+
+## 9. Watch
+
+Once a review is posted, keep watching the PR the way `pr:watch` does: while it is open, never end a turn without
+`gh_review.py wait <n>` running in the background (Bash `run_in_background`) — after each review, and while a preview
+waits on the user's choice (start it before asking). It polls every minute and wakes you with what happened:
+
+| Event               | Do                                                                                   |
+|---------------------|--------------------------------------------------------------------------------------|
+| `review-requested`  | The author asked for the review again: run the re-review (section 8) on the new head |
+| `timeout`           | Nothing happened for an hour: wait again                                             |
+| `merged` / `closed` | Final report — the problems still open, if any — and stop                            |
+
+A re-review the author requested runs on its own up to the preview: a clean round is approved (section 7), anything
+else waits for the user's choice like any round, with the `wait` running meanwhile. The watch ends only on `merged`,
+`closed` or the user saying to stop. When the user asks for a review again in chat, run the re-review right away,
+whether or not the author requested it.
 
 ## Guardrails
 
 - Never post, reply, resolve or approve without the user's confirmation of that exact content; never approve on a
-  head the user did not confirm.
+  head the user did not confirm — except a clean round (section 7), which is approved without asking.
+- Never stop watching an open PR you reviewed on your own: keep a `wait` running until it is merged or closed.
 - Never raise a dismissed problem again, in this round or any later one.
 - Never claim a problem without a concrete scenario read from the code; uncertainty is a question, not a finding.
 - Stay inside the task: no findings in untouched code, no style the tooling accepts, no scope creep.
@@ -303,7 +344,11 @@ rebuild it from `viewerThreads` — each thread you opened is a problem, numbere
 | `post … --approved-by-user`           | Required with `"event": "APPROVE"`                               |
 | `ledger [<pr>]`                       | The ledger, its path and `nextProblemId`                         |
 | `record <update\|-> [--pr …]`         | The ledger after merging `{"task": …, "problems": [{id, …}]}`    |
+| `wait [<pr>] [--timeout S]`           | `events` (`review-requested`, `merged`, `closed`, `timeout`),    |
+|                                       | `pr`, `requested`, `requestedAt`, `lastReviewedAt`               |
 
 `<pr>` is a number, a URL or a branch; without it, the current branch's PR. `botFindings` entries carry `kind`
 (`thread`, `comment`, `review`), `status` (`open`, `resolved`, `hidden`) and the human `replies` of a thread.
-`PR_REVIEW_HOME` moves the ledger directory.
+`PR_REVIEW_HOME` moves the ledger directory. `wait` polls every `--interval` seconds (60) and reports
+`review-requested` when the viewer is a requested reviewer again and the request is newer than their last review;
+`--timeout` is 3600 seconds by default, `0` = never. Transient `gh` errors are retried; it fails after five in a row.

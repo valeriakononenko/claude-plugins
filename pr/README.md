@@ -50,7 +50,10 @@ previews the problems for you to pick from, and posts the ones you chose as one 
 - **Re-reviews**: every earlier problem is checked as fixed, still open or worth a follow-up task, the new commits are
   checked for regressions, and fixed threads are answered and resolved.
 - **A ledger per PR** remembers what was posted and what you dismissed — a dismissed problem is never raised again.
-- **Approves only on your word**, for the exact head commit you confirmed.
+- **Approves on its own** when CI is green, every earlier problem is closed and nothing new is found but
+  documentation or comment nits — those go along as comments. Otherwise it approves only on your word, for the exact
+  head commit you confirmed.
+- **Keeps watching** the PR until it is merged, and re-reviews it whenever the author requests the review again.
 
 ## Install
 
@@ -94,7 +97,9 @@ Run `/pr:review 412` (or `/pr:review 412 SHOP-123` to name the task), or ask:
 - "they pushed fixes to #412, re-review it"
 
 Answer the preview with `all`, `P1 P3` or `none`, or ask about any problem first. Then choose request changes,
-comment or approve — nothing reaches GitHub before that.
+comment or approve — nothing reaches GitHub before that. The one exception is a clean round — CI green, every earlier
+problem closed, nothing new but documentation or comment nits — which is approved right away, with the nits as
+comments. After the review a background `wait` watches the PR, and a re-request of the review starts the next round.
 
 ## Script commands
 
@@ -121,3 +126,4 @@ All commands print JSON. `<pr>` is a number, a URL or a branch; without it, the 
 | `post <spec\|-> [--pr …] [--dry-run]` | Publish one review: body, inline threads, replies; `--approved-by-user` |
 | `ledger [<pr>]`                       | The PR's review ledger: posted, fixed and dismissed problems            |
 | `record <update\|-> [--pr …]`         | Merge problem statuses and the task key into the ledger                 |
+| `wait [<pr>]`                         | Poll until the review is requested again, or the PR is merged or closed |
