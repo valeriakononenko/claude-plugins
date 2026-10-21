@@ -22,6 +22,8 @@ previews the problems for you to pick from, and posts the ones you chose as one 
 - **Addressed comments closed properly**: after the push, bot threads are resolved *and* hidden, bot findings posted
   as top-level comments and bot review bodies are hidden as Resolved (they have no resolve), and a second `state`
   confirms nothing addressed is left on screen. People's threads get a reply and stay theirs to resolve.
+- **Review re-requested**: once every point of a reviewer who requested changes is fixed or answered, they are asked
+  to review again — the only way GitHub tells them it is their turn.
 - **Rebased when the base runs ahead**: when the PR turns behind or conflicting, it is rebased onto the base, clear
   conflicts are resolved, the tests are rerun, and the result is pushed with `--force-with-lease`. A conflict that
   means choosing between the PR and what landed on the base comes back to you instead.
@@ -31,7 +33,7 @@ previews the problems for you to pick from, and posts the ones you chose as one 
   onto the base — and CI is never made green by weakening it (no skipped tests, `continue-on-error`, `--no-verify` or
   lowered thresholds).
 - A dependency-free Python script on top of `gh` that returns the whole PR state as one JSON document, replies to
-  and resolves review threads, and hides comments and review bodies.
+  and resolves review threads, hides comments and review bodies, and re-requests reviews.
 
 ### Reviewing: `pr:review`
 

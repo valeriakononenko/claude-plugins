@@ -5,7 +5,7 @@ One `state` call returns everything the watch loop needs in a single JSON docume
 head commit with its outcome, the unresolved review threads, the latest review per reviewer, the top-level comments
 and the reviewers still pending. `logs` prints the failing part of each failed GitHub Actions job, `reply` answers a
 review thread, `resolve` resolves one, `close` resolves it and hides its comments, `hide` minimizes any comment or
-review body, and `wait` polls the PR until something needs the watcher: checks finished, new review activity, the
+review body, `rerequest` asks the reviewers who requested changes to review again, and `wait` polls the PR until something needs the watcher: checks finished, new review activity, the
 branch fell behind its base or into conflict, someone else pushed, or the PR was merged or closed.
 
 Requires an authenticated gh (`gh auth status`). Every command prints JSON to stdout.
@@ -23,6 +23,7 @@ FAILED_CONCLUSIONS = {"FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "A
 PASSED_CONCLUSIONS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 PENDING_STATES = {"QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED", "EXPECTED"}
 BASE_EVENTS = {"BEHIND": "behind", "DIRTY": "conflicts"}
+DECIDING_REVIEW_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
 WAIT_RETRIES = 5
 
 STATE_QUERY = """
@@ -197,6 +198,15 @@ def latest_reviews(nodes):
     ]
 
 
+def changes_requested_by(nodes, viewer):
+    """People whose standing verdict is CHANGES_REQUESTED: a later COMMENTED review does not lift it, as on GitHub."""
+    verdict = {}
+    for review in nodes:
+        if review["state"] in DECIDING_REVIEW_STATES and not is_bot(review["author"]):
+            verdict[login(review["author"])] = review["state"]
+    return [who for who, state in verdict.items() if state == "CHANGES_REQUESTED" and who != viewer]
+
+
 def collect_state(owner, name, number):
     data = graphql(STATE_QUERY, owner=owner, repo=name, number=number)
     pr = data["repository"]["pullRequest"]
@@ -245,6 +255,7 @@ def collect_state(owner, name, number):
             "mergeStateStatus": pr["mergeStateStatus"],
             "reviewDecision": pr["reviewDecision"],
             "pendingReviewers": [r for r in pending_reviewers if r],
+            "changesRequestedBy": changes_requested_by(pr["reviews"]["nodes"], data["viewer"]["login"]),
         },
         "checks": {"rollup": rollup.get("state"), **summary, "items": checks},
         "unresolvedThreads": threads,
@@ -314,6 +325,18 @@ def cmd_close(args):
     node = graphql(THREAD_COMMENTS_QUERY, id=args.thread)["node"] or {}
     first = ((node.get("comments") or {}).get("nodes") or [None])[0]
     emit({**thread, "comment": minimize(first["id"], args.reason) if first else None})
+
+
+def cmd_rerequest(args):
+    owner, name, number = resolve_pr(args.pr, args.repo)
+    pr = collect_state(owner, name, number)["pr"]
+    wanted = args.reviewer or pr["changesRequestedBy"]
+    already = [r for r in wanted if r in pr["pendingReviewers"]]
+    asked = [r for r in wanted if r not in already]
+    if asked:
+        gh("api", "-X", "POST", f"repos/{owner}/{name}/pulls/{number}/requested_reviewers",
+           *(arg for r in asked for arg in ("-f", f"reviewers[]={r}")))
+    emit({"requested": asked, "alreadyPending": already})
 
 
 def activity(state):
@@ -392,6 +415,12 @@ def build_parser():
         if command == "logs":
             p.add_argument("--lines", type=int, default=150, help="Keep the last N lines per job (0 = all)")
         p.set_defaults(fn=fn)
+
+    p = sub.add_parser("rerequest", help="Ask the reviewers who requested changes to review again")
+    p.add_argument("pr", nargs="?", help="PR number, URL or branch (default: the current branch's PR)")
+    p.add_argument("--repo", help="OWNER/REPO when not run inside the repository")
+    p.add_argument("--reviewer", action="append", help="Only this login (repeatable; default: `changesRequestedBy`)")
+    p.set_defaults(fn=cmd_rerequest)
 
     p = sub.add_parser("wait", help="Poll the PR until something needs the watcher, then print what happened")
     p.add_argument("pr", nargs="?", help="PR number, URL or branch (default: the current branch's PR)")

@@ -4,11 +4,11 @@ description: >
   Shepherd an open pull request to merge: wait for its GitHub Actions / checks, fix whatever fails at the root cause,
   then work through every review (human and bot): fix what is clearly fixable, reply where the reviewer is wrong, and
   hand the architectural and trade-off calls back to the user as weighed options with a recommendation. Commits and
-  pushes the fixes to the PR branch, resolves and hides the bot comments it addressed, rebases onto the base branch
-  when the PR falls behind or into conflict, and keeps watching until the PR is merged. Use right after a PR is opened
-  or pushed, and whenever the user asks to watch / babysit / shepherd a PR, to get CI green, to fix failing checks or
-  actions, to address / handle / work through review comments, to resolve or close addressed comments, or to "take
-  care of the PR".
+  pushes the fixes to the PR branch, resolves and hides the bot comments it addressed, re-requests the review from
+  whoever requested changes once their points are addressed, rebases onto the base branch when the PR falls behind or
+  into conflict, and keeps watching until the PR is merged. Use right after a PR is opened or pushed, and whenever the
+  user asks to watch / babysit / shepherd a PR, to get CI green, to fix failing checks or actions, to address / handle
+  / work through review comments, to resolve or close addressed comments, or to "take care of the PR".
 ---
 
 # Watch a pull request
@@ -18,7 +18,8 @@ Takes a PR from "opened" to "merged". Three duties, in a loop:
 1. **Checks.** Wait for every check on the head commit. A failure is fixed at its root cause, verified locally and
    pushed.
 2. **Reviews.** Every unresolved thread, review body and top-level comment is read against the current code, then
-   fixed, answered or escalated to the user — and once addressed, closed so the PR shows only what is still open.
+   fixed, answered or escalated to the user — and once addressed, closed so the PR shows only what is still open. A
+   reviewer who requested changes is asked to review again once all their points are addressed.
 3. **Base.** When the base branch moves on and the PR falls behind or into conflict, rebase onto it.
 
 Green with every review answered is not the end: it is waiting. A new review, a rerun or a moved base can turn it red
@@ -35,12 +36,14 @@ It needs an authenticated `gh` (`gh auth status`). With no PR argument it uses t
 ## Authority
 
 Invoking this skill authorizes **new commits pushed to the PR's head branch**, **rebasing that branch onto its base**
-when the PR is behind or conflicting (pushed with `--force-with-lease`), replies on the PR, and resolving and hiding
-**bot** comments once they are addressed. Nothing else:
+when the PR is behind or conflicting (pushed with `--force-with-lease`), replies on the PR, resolving and hiding
+**bot** comments once they are addressed, and **re-requesting the review from a person who requested changes** once
+their points are addressed. Nothing else:
 
 - Never force-push except the lease-protected push of such a rebase; never amend, squash or otherwise rewrite pushed
   commits, and never push to the base branch or another branch.
-- Never merge, close, mark ready / draft, request or dismiss reviews, or edit the PR title and description.
+- Never merge, close, mark ready / draft, request a review from anyone new, dismiss a review, or edit the PR title and
+  description.
 - Never weaken a gate to get green: no skipped or deleted tests, no `continue-on-error`, no `--no-verify`, no lowered
   coverage or lint thresholds, no `# noqa` / `@ts-ignore` / `eslint-disable` to silence a real finding, no retrying a
   genuine failure until it passes. A change to what CI enforces (workflow files, thresholds, required checks) is a
@@ -167,10 +170,12 @@ reviewers' "viewed" files for nothing.
     - A review body or top-level comment has no thread: answer with one `gh pr comment <n> --body-file -` that covers
       them all, not one comment each.
     - Decide items get no reply until the user has chosen.
-    - Then close what was addressed (see below).
+    - Then close what was addressed (see below), and re-request the review (see below).
 7. **Report** in chat at the end of each pass:
     - checks: passing / failing, with anything rerun as flaky or blocked outside the PR;
     - what was fixed, each with its commit sha, and the threads answered, resolved or hidden — saying which;
+    - the reviewers asked to review again, and those who requested changes but were not, with the open item that
+      holds them back;
     - rebases, with the base sha they moved onto;
     - decisions still open, and reviewers who have not reviewed yet (`pendingReviewers`).
 8. **Keep watching until the PR is merged.** While the PR is open, never end a turn without a `gh_pr.py wait <n>`
@@ -218,6 +223,18 @@ the user says so. A finding that is not addressed stays visible, and the report 
 **Verify** by running `state` again: `resolvedVisibleThreads` (resolved bot threads still on screen) is empty, and
 nothing that was closed is left in `unresolvedThreads`, `comments` or the visible review bodies.
 
+## Re-request the review
+
+A `CHANGES_REQUESTED` review keeps blocking the PR after the fixes are pushed, and the reviewer gets no signal that it
+is their turn: GitHub notifies them only when the review is requested again. So once a pass has replied on the PR,
+run `rerequest <n>` for the people in `changesRequestedBy` whose every point is now fixed or answered in the thread.
+
+- Leave out a reviewer while one of their items is still a Decide waiting on the user, or a Fix not yet pushed: the
+  re-request then goes out in the pass that closes it. Pass the ones to ask with `--reviewer <login>` (repeatable).
+- A reviewer already in `pendingReviewers` is not asked again; `rerequest` reports them as `alreadyPending`.
+- People only: bot reviewers re-run on the push on their own, and `changesRequestedBy` leaves them and `viewer` out.
+- Never request a review from someone who has not reviewed, and never dismiss a review to unblock the PR.
+
 ## Script commands
 
 | Command                                | Returns (JSON)                                                      |
@@ -228,12 +245,14 @@ nothing that was closed is left in `unresolvedThreads`, `comments` or the visibl
 | `resolve <threadId>`                   | The thread's `id` and `isResolved`                                  |
 | `close <threadId> [--reason R]`        | The thread resolved and its first comment hidden (R: `RESOLVED`)    |
 | `hide <id> [--reason R]`               | The comment or review body hidden; a hidden one gets the new reason |
+| `rerequest [<pr>] [--reviewer LOGIN]`  | `requested` and `alreadyPending` logins (default: all below)        |
 | `wait [<pr>] [--repo …] [--timeout S]` | `events`, `pr`, check counts and `newActivity` (below)              |
 
-`pr` holds the head branch and sha, base, review decision and `pendingReviewers`; each check carries an `outcome`
-of `pending`, `passed` or `failed`. Threads come as `unresolvedThreads` and `resolvedVisibleThreads` (resolved bot
-threads still on screen). Comments and reviews carry `isBot` and `isMinimized`; hidden top-level comments and
-hidden review bodies are left out. `<pr>` is a number, a URL or a branch. All ids come from `state`.
+`pr` holds the head branch and sha, base, review decision, `pendingReviewers` and `changesRequestedBy` (people whose
+standing verdict is `CHANGES_REQUESTED` — a later comment-only review does not lift it); each check carries an
+`outcome` of `pending`, `passed` or `failed`. Threads come as `unresolvedThreads` and `resolvedVisibleThreads`
+(resolved bot threads still on screen). Comments and reviews carry `isBot` and `isMinimized`; hidden top-level
+comments and hidden review bodies are left out. `<pr>` is a number, a URL or a branch. All ids come from `state`.
 
 `wait` polls `state` every `--interval` seconds (60) and exits on the first change that needs the watcher: `merged`,
 `closed`, `head-moved`, `checks-done` (pending checks all finished), `behind`, `conflicts` (the merge state turned
@@ -253,4 +272,5 @@ retried; it fails only after five in a row.
   why.
 - Never resolve or hide anything whose point is not addressed in the code or answered in the thread, and never resolve
   or hide a person's comment unless the user says so.
+- Re-request the review only from people who requested changes, and only once all their points are addressed.
 - Do not invent a check result or a reviewer's intent: unreadable logs or ambiguous comments are reported as such.
