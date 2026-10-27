@@ -8,12 +8,13 @@ head commit that was checked, and deletes the remote branch unless GitHub does i
 someone already merged it only deletes the remote branch. `branches` fetches with --prune and classifies every local
 branch: delete (its PR is merged, or its upstream is gone and its content is in the base), update (yours and behind the
 base: merge the base in and push), fast-forward (someone else's, behind its upstream), or ask (merged with extra
-commits, closed unmerged, diverged from its upstream).
+commits, closed unmerged, diverged from its upstream) — and every linked worktree: remove, ask (dirty) or keep.
 
 Requires an authenticated gh (`gh auth status`) and git 2.38+. Every command prints JSON to stdout.
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,6 +28,7 @@ PENDING_STATES = {"QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED", "E
 SQUASH_SUBJECT_RE = re.compile(r"\(#\d+\)$")
 MERGE_SUBJECT_RE = re.compile(r"^Merge pull request #\d+")
 HISTORY_DEPTH = 30
+DIRTY_FILES_SHOWN = 20
 
 PR_QUERY = """
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -332,9 +334,13 @@ def content_in(base_ref, branch):
     return merged.stdout.split("\n", 1)[0].strip() == git("rev-parse", f"{base_ref}^{{tree}}")
 
 
-def find_pr(head):
-    prs = json.loads(gh("pr", "list", "--head", head, "--state", "all", "--limit", "20",
-                        "--json", "number,state,author,headRefOid,baseRefName,url,mergedAt"))
+def find_pr(head, oid):
+    """The branch's PR by head name; failing that, by its tip commit (a branch pushed under another name)."""
+    fields = "number,state,author,headRefOid,baseRefName,url,mergedAt"
+    prs = json.loads(gh("pr", "list", "--head", head, "--state", "all", "--limit", "20", "--json", fields))
+    if not prs:
+        prs = [p for p in json.loads(gh("pr", "list", "--search", oid, "--state", "all", "--limit", "20",
+                                        "--json", fields)) if p["headRefOid"] == oid]
     for state in ("OPEN", "MERGED", "CLOSED"):
         found = sorted((p for p in prs if p["state"] == state), key=lambda p: p.get("mergedAt") or "", reverse=True)
         if found:
@@ -361,19 +367,73 @@ def authored_only_by(email, base_ref, branch):
     return authors <= {email}
 
 
-def is_dirty(worktree):
-    return bool(worktree) and bool(git("status", "--porcelain", cwd=worktree))
+def uncommitted(worktree):
+    """What is not committed in a worktree — staged, modified and untracked files, and the diff stat — or None."""
+    lines = git("status", "--porcelain", "--untracked-files=all", cwd=worktree).splitlines() if worktree else []
+    if not lines:
+        return None
+    staged = [l[3:] for l in lines if l[0] not in " ?"]
+    modified = [l[3:] for l in lines if l[1] not in " ?"]
+    untracked = [l[3:] for l in lines if l.startswith("??")]
+    return {
+        "count": len(lines),
+        "staged": staged[:DIRTY_FILES_SHOWN], "modified": modified[:DIRTY_FILES_SHOWN],
+        "untracked": untracked[:DIRTY_FILES_SHOWN],
+        "diffStat": git("diff", "HEAD", "--stat", cwd=worktree, check=False),
+    }
+
+
+def list_worktrees():
+    entries, entry = [], {}
+    for line in git("worktree", "list", "--porcelain").splitlines() + [""]:
+        if not line:
+            if entry:
+                entries.append(entry)
+            entry = {}
+            continue
+        key, _, value = line.partition(" ")
+        if key == "worktree":
+            entry = {"path": value, "branch": None, "detached": False, "locked": False}
+        elif key == "HEAD":
+            entry["head"] = value
+        elif key == "branch":
+            entry["branch"] = value.removeprefix("refs/heads/")
+        elif key in ("detached", "locked"):
+            entry[key] = True
+    return entries
+
+
+def inside(path, directory):
+    path, directory = os.path.realpath(path), os.path.realpath(directory)
+    return path == directory or path.startswith(directory + os.sep)
+
+
+def worktree_plan(tree, removable, why, main_worktree):
+    """Whether a linked worktree can go, and if not, what keeps it; uncommitted work always goes to the user."""
+    changes = uncommitted(tree["path"])
+    plan = {"path": tree["path"], "branch": tree["branch"], "head": tree["head"], "uncommitted": changes}
+    if not removable:
+        return {**plan, "action": "keep", "reason": why}
+    if os.path.realpath(tree["path"]) == os.path.realpath(main_worktree):
+        return {**plan, "action": "keep", "reason": "the main worktree"}
+    if inside(os.getcwd(), tree["path"]):
+        return {**plan, "action": "keep", "reason": "this session runs inside it"}
+    if tree["locked"]:
+        return {**plan, "action": "keep", "reason": "locked"}
+    if changes:
+        return {**plan, "action": "ask", "reason": f"{why}, but it has {changes['count']} uncommitted files"}
+    return {**plan, "action": "remove", "reason": why}
 
 
 def classify(row, base_ref, viewer, email):
     branch = row["name"]
-    pr = find_pr(row["upstreamBranch"] or branch)
+    pr = find_pr(row["upstreamBranch"] or branch, row["oid"])
     row["pr"] = pr
     row["inBase"] = content_in(base_ref, branch)
     row["unmergedCommits"] = int(git("rev-list", "--count", f"{base_ref}..{branch}"))
     row["behindBase"] = int(git("rev-list", "--count", f"{branch}..{base_ref}"))
     row["mine"] = (pr["author"] == viewer) if pr else authored_only_by(email, base_ref, branch)
-    row["dirty"] = is_dirty(row["worktree"])
+    row["uncommitted"] = uncommitted(row["worktree"])
 
     if pr and pr["state"] == "MERGED":
         relation, extra = relation_to_pr_head(row["oid"], pr["headOid"])
@@ -403,6 +463,7 @@ def classify(row, base_ref, viewer, email):
 
 
 def cmd_branches(args):
+    git("worktree", "prune")
     if not args.no_fetch:
         git("fetch", "--prune", args.remote)
     base = args.base or default_base(args.remote)
@@ -415,25 +476,45 @@ def cmd_branches(args):
 
     base_row = next((r for r in rows if r["name"] == base), None)
     if base_row:
-        base_row["dirty"] = is_dirty(base_row["worktree"])
+        base_row["uncommitted"] = uncommitted(base_row["worktree"])
         ahead = int(git("rev-list", "--count", f"{base_ref}..{base}"))
         behind = int(git("rev-list", "--count", f"{base}..{base_ref}"))
         base_row["action"] = "ask" if ahead else "fast-forward" if behind else "up-to-date"
         base_row["reason"] = f"{ahead} local commits not on {base_ref}" if ahead else None
 
-    plan = []
+    plan, merged_reasons = [], {}
     for row in rows:
         if row["name"] == base:
             continue
         row["action"], row["reason"] = classify(row, base_ref, viewer, email)
+        row["mergedButUncommitted"] = row["action"] == "delete" and row["uncommitted"] is not None
+        merged_reasons[row["name"]] = row["reason"]
+        if row["mergedButUncommitted"]:
+            row["action"] = "ask"
+            row["reason"] += f", but its worktree has {row['uncommitted']['count']} uncommitted files"
         row["push"] = row["action"] == "update" and bool(row["upstream"]) and not row["upstreamGone"]
         plan.append(row)
+
+    by_branch = {r["name"]: r for r in plan}
+    worktrees = []
+    for tree in list_worktrees():
+        if os.path.realpath(tree["path"]) == os.path.realpath(main_worktree):
+            continue
+        if tree["detached"]:
+            merged = content_in(base_ref, tree["head"])
+            worktrees.append(worktree_plan(tree, merged, "detached at a commit already in the base" if merged
+                                           else "detached with commits not in the base", main_worktree))
+        elif tree["branch"] in by_branch:
+            row = by_branch[tree["branch"]]
+            removable = row["action"] == "delete" or row["mergedButUncommitted"]
+            worktrees.append(worktree_plan(tree, removable, merged_reasons[row["name"]], main_worktree))
 
     emit({
         "viewer": viewer, "remote": args.remote, "base": base, "baseRef": base_ref,
         "baseOid": git("rev-parse", base_ref), "current": current, "mainWorktree": main_worktree,
         "baseBranch": base_row,
         "branches": plan,
+        "worktrees": worktrees,
         "counts": {a: sum(1 for r in plan if r["action"] == a)
                    for a in ("delete", "update", "fast-forward", "ask", "skip", "up-to-date")},
     })

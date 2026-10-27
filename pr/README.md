@@ -50,7 +50,9 @@ you to pick from, and posts the ones you chose as one GitHub review.
 - **Remote branch deleted** unless GitHub does it, it lives in a fork, or open PRs are stacked on it.
 - **Merged branches deleted locally**, squash-merged ones included: a branch goes when its PR is merged and it holds
   nothing after the PR head, or its upstream is gone and its content is already in the base. Anything else with work
-  on it — commits after the merged head, a PR closed unmerged — is asked about.
+  on it — commits after the merged head, a PR closed unmerged — is asked about. Their worktrees go with them, detached
+  ones at a merged commit too. A branch or worktree with uncommitted work is never deleted on its own: you get a
+  warning listing what is staged, modified and untracked, and an explicit keep-or-delete question.
 - **The base merged into your branches**: the base is fast-forwarded, then merged into every branch of yours that is
   behind it, and the ones with an upstream are pushed. Clear conflicts are resolved and verified with the tests; a
   conflict that means choosing between your branch and the base comes back to you as a decision.

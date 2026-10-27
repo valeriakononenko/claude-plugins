@@ -40,8 +40,9 @@ to the user's own branches**. Nothing else:
   the one named.
 - Never force-push, rebase or otherwise rewrite a branch here; the base comes in as a merge commit.
 - Never push a branch without an upstream, never push someone else's branch, and never push to the base.
-- Never discard the user's work: a dirty worktree is stashed and restored, a branch with commits that are on no
-  remote and in no merged PR is kept and asked about.
+- Never discard the user's work: a dirty worktree being updated is stashed and restored, a branch or worktree with
+  uncommitted work is deleted only on the user's explicit answer after a warning, and a branch with commits that are
+  on no remote and in no merged PR is kept and asked about.
 
 ## Merge
 
@@ -72,8 +73,10 @@ to the user's own branches**. Nothing else:
 
 ## Sync the local branches
 
-1. **Read the plan.** `gh_merge.py branches` fetches `origin` with `--prune` and returns `base`, `baseRef`,
-   `current`, `baseBranch` and every other local branch with an `action` and its `reason`:
+1. **Read the plan.** `gh_merge.py branches` prunes stale worktree entries, fetches `origin` with `--prune` and
+   returns `base`, `baseRef`, `current`, `baseBranch`, every other local branch with an `action` and its `reason`, and
+   every linked worktree (below). A branch's PR is found by its upstream name, or by its tip commit when it was pushed
+   under another name or has no upstream:
 
     - `delete` — its PR is merged and the branch is at or behind the PR head, or its upstream is gone and its
       content is already in the base. Delete it.
@@ -86,16 +89,51 @@ to the user's own branches**. Nothing else:
    "The user's own" means the PR's author is the viewer, or, without a PR, every commit not on the base is authored
    with the user's `user.email`. A PR checked out to review a colleague's work is theirs: it is never merged into or
    pushed.
+
+   A merged branch whose worktree holds uncommitted work is `ask` with `mergedButUncommitted`, not `delete`.
+   `worktrees` lists every linked worktree — on a branch or detached — with an `action` and its `reason`: `remove`
+   (its branch is merged, or it is detached at a commit already in the base, and nothing is uncommitted), `ask` (it
+   would go, but holds uncommitted work) or `keep` (its branch stays, it is locked, or this session runs inside it).
+   `uncommitted` — on branches and worktrees alike — lists the `staged`, `modified` and `untracked` files and the
+   `diffStat`.
 2. **Where each branch is worked.** A branch checked out in a worktree (`worktree`) is updated there with
-   `git -C <worktree> …`; any other branch is checked out in the main worktree. A `dirty` worktree is stashed first
-   (`git stash push -u -m "pr:merge sync"`) and popped after; a pop that conflicts is left stashed and reported.
+   `git -C <worktree> …`; any other branch is checked out in the main worktree. A `dirty` worktree that is being
+   updated is stashed first (`git stash push -u -m "pr:merge sync"`) and popped after; a pop that conflicts is left
+   stashed and reported. A worktree that is going away is never stashed: its files are the user's to decide on.
 3. **Base first.** `baseBranch.action` `fast-forward`: `git -C <worktree> merge --ff-only <baseRef>` when it is
    checked out, else `git fetch . <baseRef>:<base>`. `ask` (local commits on the base) is reported and the base left
    alone; the other branches still merge `baseRef`.
-4. **Delete.** `git branch -D <name>` — `-d` refuses a squash-merged branch, and the script has already proven it
-   merged. The current branch is left for the base first. A branch checked out in another worktree: `git worktree
-   remove <path>` when that worktree is clean, else keep both and report it.
-5. **Update.** For each `update` branch: if it is also behind its upstream, `git merge --ff-only <upstream>` first;
+4. **Remove worktrees** before their branches, since git will not delete a branch checked out in one:
+    - `remove` → `git worktree remove <path>`. Files ignored by `.gitignore` (`node_modules`, build output) do not
+      stop it.
+    - `ask` → see Uncommitted work below.
+    - `keep` because this session runs inside it → it cannot remove the directory it stands in: report it with the
+      command to run from elsewhere, and keep its branch too.
+5. **Delete branches.** `git branch -D <name>` — `-d` refuses a squash-merged branch, and the script has already
+   proven it merged. The current branch is left for the base first. A branch whose worktree was kept stays as well.
+
+### Uncommitted work
+
+A merged branch or a worktree that would go but holds uncommitted work (`mergedButUncommitted`, a worktree `ask`) is
+never deleted on the plan alone. Warn the user and ask, one question per branch or worktree:
+
+```
+⚠ feat/SHOP-123 — PR #412 merged, but ../wt-shop-123 has uncommitted work:
+  staged:    src/cart.ts
+  modified:  src/cart.test.ts
+  untracked: notes.txt
+  2 files changed, 14 insertions(+), 3 deletions(-)
+  <one line on what the changes look like, from `git -C <path> diff HEAD`>
+Deleting it loses this work for good.
+```
+
+Then `AskUserQuestion` with exactly two options — **Keep** (first) and **Delete, losing the changes** — and no
+default action. Keep leaves the branch, the worktree and the files untouched and lists them in the report. Delete,
+only on that explicit answer: `git worktree remove --force <path>` and `git branch -D <name>`; for a branch checked
+out in the main worktree, `git switch --discard-changes <base>`, `git clean -fd` for its untracked files, then
+`git branch -D <name>`. Never decide it yourself, never stash or commit the work to get past the question, and never
+treat one answer as covering another branch.
+6. **Update.** For each `update` branch: if it is also behind its upstream, `git merge --ff-only <upstream>` first;
    then `git merge --no-edit <baseRef>`.
     - **Conflicts.** Resolve one when the intent of both sides is clear and can be kept — imports, neighbouring edits,
       lockfiles regenerated with the project's tool, a symbol renamed on the base that the branch uses. When
@@ -105,11 +143,11 @@ to the user's own branches**. Nothing else:
       it. A clean merge is not tested here: CI runs on the push.
     - **Push** with a plain `git push` when `push` is true. A rejected push means the upstream moved meanwhile:
       `git fetch`, `git merge --no-edit <upstream>` (conflicts as above) and push again — never `--force`.
-6. **Fast-forward** the `fast-forward` branches with `git merge --ff-only <upstream>`, or
+7. **Fast-forward** the `fast-forward` branches with `git merge --ff-only <upstream>`, or
    `git fetch . <upstream>:<name>` when the branch is not checked out.
-7. **Ask** about the `ask` branches in one `AskUserQuestion` (up to four; the rest in the report), each with what is on
+8. **Ask** about the other `ask` branches in one `AskUserQuestion` (up to four; the rest in the report), each with what is on
    it — `git log --oneline <baseRef>..<name>` — and the options that fit: delete, keep, push it as a new PR.
-8. **Return** to the branch the user started on (or the base, if it was deleted) and restore its stash.
+9. **Return** to the branch the user started on (or the base, if it was deleted) and restore its stash.
 
 ## Report
 
@@ -117,7 +155,7 @@ At the end, in chat:
 
 - the merge: PR, method and why, merge commit sha, or auto-merge enabled; the remote branch deleted or kept and why;
 - the base: fast-forwarded from → to, or left alone and why;
-- deleted branches, each with its PR;
+- removed worktrees, deleted branches (each with its PR), and worktrees kept with what keeps them;
 - updated branches: merged, conflicts resolved (which files, how verified), pushed or local only;
 - fast-forwarded and skipped branches;
 - what waits on the user: blockers, conflicts brought back as decisions, `ask` branches, a stash that did not pop.
@@ -139,7 +177,9 @@ already merged it merges nothing, needs no `--method`, and only deletes the remo
 - Merge only the user's own PR, only the named one, only when `ready` (or with `--auto` when only required checks are
   pending); never `--admin`.
 - Use the repository's method; never pick one the history contradicts without the user saying so.
-- Delete only branches the script classifies as `delete`, and remove only clean worktrees.
+- Delete only branches the script classifies as `delete`, and remove only worktrees it classifies as `remove`. Anything
+  with uncommitted work goes only on the user's explicit "delete" for that branch or worktree, after a warning that
+  says what is uncommitted.
 - Never force-push, rebase or reset a branch; never push someone else's branch, a branch without an upstream, or the
   base.
 - Never leave the user's uncommitted work anywhere but where it was, or in a reported stash.
