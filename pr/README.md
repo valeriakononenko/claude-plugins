@@ -40,6 +40,8 @@ you to pick from, and posts the ones you chose as one GitHub review.
 
 - **The repository's method**: squash, merge commit or rebase, from the methods the repository allows and what its
   recent PRs on the base used; the commit title and body follow the repository's settings.
+- **Your PRs only**: someone else's PR is never merged, and its remote branch is never touched. A PR someone already
+  merged is not merged again: the skill goes straight to the branch cleanup.
 - **Only when ready**: failing or pending required checks, missing approval, changes requested, conflicts or a branch
   behind its base are reported and handed to `pr:watch` — never `--admin`. With only required checks still running,
   it enables auto-merge or joins the merge queue and waits for the merge.

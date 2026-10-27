@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Merge helper for the pr:merge skill, built on the gh and git CLIs.
 
-`ready` says whether a PR can be merged now and how this repository merges: the methods it allows, the one its base
-branch history shows (squash commits titled "… (#n)", merge commits "Merge pull request #n"), auto-merge and merge
-queue, and every blocker. `merge` merges the PR with a given method, pinned to the head commit that was checked, and
-deletes the remote branch unless GitHub does it or other PRs still target it. `branches` fetches with --prune and
-classifies every local branch: delete (its PR is merged, or its upstream is gone and its content is in the base),
-update (yours and behind the base: merge the base in and push), fast-forward (someone else's, behind its upstream),
-or ask (merged with extra commits, closed unmerged, diverged from its upstream).
+`ready` says whether a PR can be merged now — only the viewer's own PRs ever can — and how this repository merges: the
+methods it allows, the one its base branch history shows (squash commits titled "… (#n)", merge commits "Merge pull
+request #n"), auto-merge and merge queue, and every blocker. `merge` merges the PR with a given method, pinned to the
+head commit that was checked, and deletes the remote branch unless GitHub does it or other PRs still target it; on a PR
+someone already merged it only deletes the remote branch. `branches` fetches with --prune and classifies every local
+branch: delete (its PR is merged, or its upstream is gone and its content is in the base), update (yours and behind the
+base: merge the base in and push), fast-forward (someone else's, behind its upstream), or ask (merged with extra
+commits, closed unmerged, diverged from its upstream).
 
 Requires an authenticated gh (`gh auth status`) and git 2.38+. Every command prints JSON to stdout.
 """
@@ -38,6 +39,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
       headRefName headRefOid baseRefName mergeable mergeStateStatus reviewDecision
       autoMergeRequest { mergeMethod }
       mergeCommit { oid }
+      mergedBy { login }
       commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes {
         __typename
         ... on CheckRun { name status conclusion isRequired(pullRequestNumber: $number) }
@@ -164,10 +166,13 @@ def history_convention(history, allowed, default):
     return (fallback if fallback in allowed else allowed[0]), "viewer's default method", counts
 
 
-def blockers_of(pr, checks, auto):
+def blockers_of(pr, checks, auto, viewer):
     found = []
-    if pr["state"] != "OPEN":
-        found.append(f"state {pr['state']}")
+    author = (pr["author"] or {}).get("login")
+    if author != viewer:
+        found.append(f"not your PR: opened by {author}")
+    if pr["state"] == "CLOSED":
+        found.append("closed without merging")
     if pr["isDraft"]:
         found.append("draft")
     if pr["mergeable"] == "CONFLICTING" or pr["mergeStateStatus"] == "DIRTY":
@@ -196,20 +201,21 @@ def collect_ready(owner, name, number):
     history = ((base.get("ref") or {}).get("target") or {}).get("history", {}).get("nodes", [])
     allowed = allowed_methods(repo)
     method, why, counts = history_convention(history, allowed, repo["viewerDefaultMergeMethod"])
+    viewer = data["viewer"]["login"]
     checks = summarize_checks(pr)
     queue = bool(base.get("mergeQueue"))
     auto_possible = queue or repo["autoMergeAllowed"]
-    hard = blockers_of(pr, checks, auto=False)
-    waiting_only = bool(checks["requiredPending"]) and blockers_of(pr, checks, auto=True) == []
+    hard = blockers_of(pr, checks, auto=False, viewer=viewer)
+    waiting_only = bool(checks["requiredPending"]) and blockers_of(pr, checks, auto=True, viewer=viewer) == []
     return {
-        "viewer": data["viewer"]["login"],
+        "viewer": viewer,
         "pr": {
             "number": pr["number"], "url": pr["url"], "title": pr["title"], "state": pr["state"],
             "isDraft": pr["isDraft"], "author": (pr["author"] or {}).get("login"),
             "isCrossRepository": pr["isCrossRepository"], "head": pr["headRefName"], "headOid": pr["headRefOid"],
             "base": pr["baseRefName"], "mergeable": pr["mergeable"], "mergeStateStatus": pr["mergeStateStatus"],
             "reviewDecision": pr["reviewDecision"], "autoMerge": (pr["autoMergeRequest"] or {}).get("mergeMethod"),
-            "mergeCommit": (pr["mergeCommit"] or {}).get("oid"),
+            "mergeCommit": (pr["mergeCommit"] or {}).get("oid"), "mergedBy": (pr["mergedBy"] or {}).get("login"),
         },
         "checks": checks,
         "repo": {
@@ -235,10 +241,15 @@ def cmd_ready(args):
 
 def delete_remote_branch(owner, name, ready):
     pr = ready["pr"]
+    if pr["author"] != ready["viewer"]:
+        return False, f"not your PR: opened by {pr['author']}"
     if ready["repo"]["deleteBranchOnMerge"]:
         return False, "GitHub deletes head branches on merge in this repository"
     if pr["isCrossRepository"]:
         return False, "the head branch lives in a fork"
+    ref = f"repos/{owner}/{name}/git/ref/heads/{pr['head']}"
+    if run(["gh", "api", ref, "--silent"], check=False).returncode != 0:
+        return False, "already deleted"
     dependents = json.loads(gh("pr", "list", "--repo", f"{owner}/{name}", "--base", pr["head"], "--state", "open",
                                "--json", "number"))
     if dependents:
@@ -252,6 +263,14 @@ def delete_remote_branch(owner, name, ready):
 def cmd_merge(args):
     owner, name, number = resolve_pr(args.pr, args.repo)
     before = collect_ready(owner, name, number)
+    if before["pr"]["state"] == "MERGED":
+        deleted, kept = delete_remote_branch(owner, name, before)
+        emit({"pr": number, "url": before["pr"]["url"], "alreadyMerged": True, "state": "MERGED",
+              "mergedBy": before["pr"]["mergedBy"], "mergeCommit": before["pr"]["mergeCommit"],
+              "remoteBranchDeleted": deleted, "remoteBranchKept": kept})
+        return
+    if not args.method:
+        raise GhError("--method is required to merge an open PR")
     if args.method not in before["repo"]["allowedMethods"] and not before["repo"]["mergeQueue"]:
         raise GhError(f"{args.method} is not allowed here: {', '.join(before['repo']['allowedMethods'])}")
     if before["blockers"] and not (args.auto and before["canAutoMerge"]):
@@ -268,7 +287,8 @@ def cmd_merge(args):
     gh(*command, stdin=sys.stdin.read() if args.body_file == "-" else None)
     after = collect_ready(owner, name, number)
     result = {
-        "pr": after["pr"]["number"], "url": after["pr"]["url"], "method": args.method, "headOid": head,
+        "pr": after["pr"]["number"], "url": after["pr"]["url"], "alreadyMerged": False, "method": args.method,
+        "headOid": head,
         "state": after["pr"]["state"], "mergeCommit": after["pr"]["mergeCommit"],
         "autoMerge": after["pr"]["autoMerge"], "remoteBranchDeleted": False, "remoteBranchKept": None,
     }
@@ -431,7 +451,7 @@ def build_parser():
     p = sub.add_parser("merge", help="Merge the PR, pinned to its checked head, and delete the remote branch")
     p.add_argument("pr", nargs="?", help="PR number, URL or branch (default: the current branch's PR)")
     p.add_argument("--repo", help="OWNER/REPO when not run inside the repository")
-    p.add_argument("--method", choices=METHODS, required=True)
+    p.add_argument("--method", choices=METHODS, help="Required unless the PR is already merged")
     p.add_argument("--auto", action="store_true", help="Enable auto-merge / join the merge queue")
     p.add_argument("--match-head", help="Head sha the PR must still have (default: the head `ready` saw)")
     p.add_argument("--subject", help="Merge commit subject (default: the repository's setting)")

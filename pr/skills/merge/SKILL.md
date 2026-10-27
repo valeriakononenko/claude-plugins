@@ -31,10 +31,11 @@ It needs an authenticated `gh` (`gh auth status`) and git 2.38+, and runs inside
 
 ## Authority
 
-Invoking this skill authorizes **merging the PR it names** when it is ready, **deleting that PR's head branch** on
-the remote, **deleting local branches** the script classifies as `delete`, and **merge commits pushed to the user's
-own branches**. Nothing else:
+Invoking this skill authorizes **merging the PR it names** when it is the user's own and ready, **deleting that PR's
+head branch** on the remote, **deleting local branches** the script classifies as `delete`, and **merge commits pushed
+to the user's own branches**. Nothing else:
 
+- Never merge someone else's PR — only the viewer's own, whoever asks — and never touch its remote branch.
 - Never merge with `--admin`, never bypass a required check, review or merge queue, and never merge a PR other than
   the one named.
 - Never force-push, rebase or otherwise rewrite a branch here; the base comes in as a merge commit.
@@ -47,21 +48,25 @@ own branches**. Nothing else:
 1. `gh_merge.py ready [<pr>]`. It returns the PR, its checks (with the required ones), the repository's
    `allowedMethods`, `convention` (the method the base branch history shows, why, and its last subjects),
    `mergeQueue`, `autoMergeAllowed`, `blockers`, `ready`, `canAutoMerge` and `unstable`.
-2. **Not ready.** Report every blocker in one list and stop:
+2. **Already merged** (`pr.state` `MERGED`, by anyone): nothing to merge. Run `gh_merge.py merge [<pr>]` without
+   `--method` — it only deletes the remote branch if it is still there (`alreadyMerged: true`) — say who merged it
+   (`mergedBy`, `mergeCommit`), and go on to the sync. **Closed** without merging: report it and offer the sync alone.
+3. **Not ready.** Report every blocker in one list and stop:
+    - not your PR → it is not yours to merge, and that is final: no offer to merge it anyway; the sync alone is fine;
     - failing checks, unaddressed reviews, conflicts or a branch behind its base → offer `pr:watch`, which fixes them;
-    - only required checks still running and `canAutoMerge` → merge with `--auto` (step 4): GitHub merges it when they
+    - only required checks still running and `canAutoMerge` → merge with `--auto` (step 5): GitHub merges it when they
       pass, and a merge queue takes it the same way;
     - draft, missing approval → the user's or a reviewer's move; say whose.
-3. **Choose the method**: `convention.method`. It is the only allowed one, or what most recent PRs on the base used,
+4. **Choose the method**: `convention.method`. It is the only allowed one, or what most recent PRs on the base used,
    or the user's default on GitHub. Ask only when the evidence is thin (`why` is the viewer's default and more than one
    method is allowed) or the user named another. `unstable` (non-required checks failing) is mentioned, not a stop.
-4. `gh_merge.py merge [<pr>] --method <m> [--auto]`. The merge is pinned to the head `ready` saw: a push since then
+5. `gh_merge.py merge [<pr>] --method <m> [--auto]`. The merge is pinned to the head `ready` saw: a push since then
    fails it, and the PR is read again. The commit title and body follow the repository's settings (`squashTitle`,
    `squashMessage`); pass `--subject` / `--body-file` only when the user asks or the repository's custom differs from
    its setting (e.g. squash bodies written from the PR description in recent history).
-5. **Remote branch.** After a merge the script deletes the head branch unless GitHub does it (`deleteBranchOnMerge`),
+6. **Remote branch.** After a merge the script deletes the head branch unless GitHub does it (`deleteBranchOnMerge`),
    it lives in a fork, or open PRs target it (deleting it would close them) — `remoteBranchKept` says why.
-6. **Auto-merge.** When the result is `autoMerge` rather than `MERGED`, wait for it with
+7. **Auto-merge.** When the result is `autoMerge` rather than `MERGED`, wait for it with
    `python3 "${CLAUDE_PLUGIN_ROOT}/skills/watch/scripts/gh_pr.py" wait <n>` in the background and go on to the sync
    once it reports `merged`. A `checks-done` with failures, or `closed`, ends the skill with a report.
 
@@ -126,11 +131,13 @@ At the end, in chat:
 | `branches [--remote R] [--base B] [--no-fetch]`  | Base, base branch state, every local branch with its action    |
 
 `<pr>` is a number, a URL or a branch; without it, the current branch's PR. `merge` refuses a PR with blockers unless
-`--auto` is given and only required checks are pending, and a method the repository does not allow.
+`--auto` is given and only required checks are pending, and a method the repository does not allow. On a PR that is
+already merged it merges nothing, needs no `--method`, and only deletes the remote branch when it is still there.
 
 ## Guardrails
 
-- Merge only the named PR, only when `ready` (or with `--auto` when only required checks are pending); never `--admin`.
+- Merge only the user's own PR, only the named one, only when `ready` (or with `--auto` when only required checks are
+  pending); never `--admin`.
 - Use the repository's method; never pick one the history contradicts without the user saying so.
 - Delete only branches the script classifies as `delete`, and remove only clean worktrees.
 - Never force-push, rebase or reset a branch; never push someone else's branch, a branch without an upstream, or the
