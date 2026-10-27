@@ -11,8 +11,9 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
   behind it and the actions. ADF via REST.
 - **[pr](pr/)** — shepherd your pull request to merge: fix failing GitHub Actions at the root cause, work through
   every review, rebase when the base runs ahead, and hand architectural and trade-off calls back to you as weighed
-  options. And review a colleague's PR against its Jira task: preview numbered problems, post the ones you pick as one
-  GitHub review, and re-review until they are fixed.
+  options. Merge it the way the repository merges and tidy the local branches after it: delete the merged ones and
+  merge main into the rest. And review a colleague's PR against its Jira task: preview numbered problems, post the
+  ones you pick as one GitHub review, and re-review until they are fixed.
 
 ## Install
 

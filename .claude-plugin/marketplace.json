@@ -17,7 +17,7 @@
     {
       "name": "pr",
       "source": "./pr",
-      "description": "Both sides of a pull request: shepherd yours to merge — fix failing GitHub Actions, work through every review, rebase when the base runs ahead — and review a colleague's against its Jira task, posting only the problems you pick as one GitHub review."
+      "description": "Both sides of a pull request: shepherd yours to merge — fix failing GitHub Actions, work through every review, rebase when the base runs ahead — merge it the way the repository merges and tidy the local branches after it, and review a colleague's against its Jira task, posting only the problems you pick as one GitHub review."
     }
   ]
 }

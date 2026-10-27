@@ -1,9 +1,10 @@
 # pr
 
 A Claude Code plugin for both sides of a pull request. As the author, it shepherds your PR to merge: it waits for the
-checks, fixes whatever fails, works through every review, rebases when the base runs ahead, and hands the calls that
-are yours to make back to you as weighed options. As the reviewer, it reviews a colleague's PR against its Jira task,
-previews the problems for you to pick from, and posts the ones you chose as one GitHub review.
+checks, fixes whatever fails, works through every review, rebases when the base runs ahead, and hands the calls that are
+yours to make back to you as weighed options. Once it is ready, it merges it the way the repository merges and puts your
+local branches in order. As the reviewer, it reviews a colleague's PR against its Jira task, previews the problems for
+you to pick from, and posts the ones you chose as one GitHub review.
 
 ## What it gives you
 
@@ -34,6 +35,25 @@ previews the problems for you to pick from, and posts the ones you chose as one 
   lowered thresholds).
 - A dependency-free Python script on top of `gh` that returns the whole PR state as one JSON document, replies to
   and resolves review threads, hides comments and review bodies, and re-requests reviews.
+
+### Merging: `pr:merge`
+
+- **The repository's method**: squash, merge commit or rebase, from the methods the repository allows and what its
+  recent PRs on the base used; the commit title and body follow the repository's settings.
+- **Only when ready**: failing or pending required checks, missing approval, changes requested, conflicts or a branch
+  behind its base are reported and handed to `pr:watch` — never `--admin`. With only required checks still running,
+  it enables auto-merge or joins the merge queue and waits for the merge.
+- **Pinned to the checked head**: a push between the check and the merge fails the merge instead of shipping
+  unreviewed commits.
+- **Remote branch deleted** unless GitHub does it, it lives in a fork, or open PRs are stacked on it.
+- **Merged branches deleted locally**, squash-merged ones included: a branch goes when its PR is merged and it holds
+  nothing after the PR head, or its upstream is gone and its content is already in the base. Anything else with work
+  on it — commits after the merged head, a PR closed unmerged — is asked about.
+- **The base merged into your branches**: the base is fast-forwarded, then merged into every branch of yours that is
+  behind it, and the ones with an upstream are pushed. Clear conflicts are resolved and verified with the tests; a
+  conflict that means choosing between your branch and the base comes back to you as a decision.
+- **Guardrails**: no force-push or rebase, no push of someone else's branch (a colleague's PR checked out for review)
+  or of a branch that was never pushed, dirty worktrees stashed and restored, other worktrees updated in place.
 
 ### Reviewing: `pr:review`
 
@@ -91,6 +111,14 @@ The watch does not end on green: between passes a background `wait` polls the PR
 when checks finish, a review comes in, someone else pushes, or the PR falls behind its base. It ends when the PR is
 merged or closed, or when you tell it to stop.
 
+### `pr:merge`
+
+Run `/pr:merge` (the current branch's PR), `/pr:merge 412`, or `/pr:merge --sync` to only tidy the branches, or ask:
+
+- "merge #412"
+- "it's approved, ship it"
+- "clean up my local branches after the merge"
+
 ### `pr:review`
 
 Run `/pr:review 412` (or `/pr:review 412 SHOP-123` to name the task), or ask:
@@ -118,6 +146,14 @@ All commands print JSON. `<pr>` is a number, a URL or a branch; without it, the 
 | `close <threadId> [--reason R]`      | Resolve a review thread and hide it (`RESOLVED` by default)                  |
 | `hide <id> [--reason R]`             | Hide a comment or review body, or change the reason of a hidden one          |
 | `wait [<pr>] [--repo …]`             | Poll until checks finish, a review lands, the base runs ahead, or it merges  |
+
+### `merge/scripts/gh_merge.py`
+
+| Command                                          | What it does                                                            |
+|--------------------------------------------------|-------------------------------------------------------------------------|
+| `ready [<pr>] [--repo OWNER/REPO]`               | Blockers, checks, allowed methods and the method the base history shows |
+| `merge [<pr>] --method M [--auto] [--subject …]` | Merge pinned to the checked head, then delete the remote branch         |
+| `branches [--remote R] [--base B] [--no-fetch]`  | Fetch with `--prune` and classify every local branch: delete, update…   |
 
 ### `review/scripts/gh_review.py`
 
