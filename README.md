@@ -9,6 +9,8 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 - **[jira](jira/)** — write Jira managers and engineers can both read: issues with a business-value summary and the
   business problem before the technical details, and reports posted as comments with a verdict panel, the facts
   behind it and the actions. ADF via REST.
+- **[language](language/)** — write text no reader can misread, in any language: ASD-STE100 (Simplified Technical
+  English) rules made language-independent, with trap profiles for English, Russian, Spanish and Estonian and a linter.
 - **[pr](pr/)** — shepherd your pull request to merge: fix failing GitHub Actions at the root cause, work through
   every review, rebase when the base runs ahead, and hand architectural and trade-off calls back to you as weighed
   options. Merge it the way the repository merges and tidy the local branches after it: delete the merged ones and
@@ -21,5 +23,6 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 /plugin marketplace add valeriakononenko/claude-plugins
 /plugin install docs@divergence082-plugins
 /plugin install jira@divergence082-plugins
+/plugin install language@divergence082-plugins
 /plugin install pr@divergence082-plugins
 ```

@@ -1,0 +1,17 @@
+{
+  "name": "language",
+  "version": "0.1.0",
+  "description": "Write text no reader can misread, in any language: a language-independent take on ASD-STE100 (Simplified Technical English) with trap profiles for English, Russian, Spanish and Estonian and a linter for the mechanical rules.",
+  "author": {
+    "name": "Valeria Kononenko"
+  },
+  "keywords": [
+    "plain-language",
+    "simplified-technical-english",
+    "asd-ste100",
+    "controlled-language",
+    "technical-writing",
+    "prompts",
+    "multilingual"
+  ]
+}

@@ -15,6 +15,11 @@
       "description": "Write Jira that managers and engineers both read: issues with a business-value summary and the business problem before the technical details, and comments that report an investigation as a verdict panel, the facts behind it and the actions — ADF via REST."
     },
     {
+      "name": "language",
+      "source": "./language",
+      "description": "Write text no reader can misread, in any language: a language-independent take on ASD-STE100 (Simplified Technical English) with trap profiles for English, Russian, Spanish and Estonian and a linter for the mechanical rules."
+    },
+    {
       "name": "pr",
       "source": "./pr",
       "description": "Both sides of a pull request: shepherd yours to merge — fix failing GitHub Actions, work through every review, rebase when the base runs ahead — merge it the way the repository merges and tidy the local branches after it, and review a colleague's against its Jira task, posting only the problems you pick as one GitHub review."
