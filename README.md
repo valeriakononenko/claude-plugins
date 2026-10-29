@@ -4,6 +4,8 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
 ## Plugins
 
+- **[coffee](coffee/)** — keep the Mac awake with `caffeinate`: say "coffee" (optionally "coffee 2h") to start
+  it and "decaf" to stop it.
 - **[docs](docs/)** — bring a consistent `docs/` system to any project: scaffold the layout,
   add custom doc sections, file plan outcomes under the right doc, and keep doc statuses honest.
 - **[jira](jira/)** — write Jira managers and engineers can both read: issues with a business-value summary and the
@@ -21,6 +23,7 @@ A [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
 ```
 /plugin marketplace add valeriakononenko/claude-plugins
+/plugin install coffee@divergence082-plugins
 /plugin install docs@divergence082-plugins
 /plugin install jira@divergence082-plugins
 /plugin install language@divergence082-plugins

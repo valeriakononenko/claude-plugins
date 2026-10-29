@@ -1,0 +1,14 @@
+{
+  "name": "coffee",
+  "version": "0.1.0",
+  "description": "Keep the Mac awake with caffeinate: say \"coffee\" to start it, optionally for a set time, and \"decaf\" to stop it.",
+  "author": {
+    "name": "Valeria Kononenko"
+  },
+  "keywords": [
+    "macos",
+    "caffeinate",
+    "sleep",
+    "keep-awake"
+  ]
+}
